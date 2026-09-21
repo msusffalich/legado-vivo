@@ -17,7 +17,7 @@
 <% if (waMessage) { %>
 <div class="card highlight">
   <h3><%= t('invite_wa_message') %> — <code><%= waCode %></code></h3>
-  <textarea id="wamsg" rows="9" readonly><%= waMessage %></textarea>
+  <textarea id="wamsg" rows="11" readonly><%= waMessage %></textarea>
   <p class="rowform">
     <button class="btn" type="button" onclick="copyWa()"><%= t('copy_message') %></button>
     <a class="btn ghost" target="_blank" rel="noopener"

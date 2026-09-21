@@ -138,8 +138,10 @@ function buildWaMessage(req, family, inviterName, invite) {
   const appUrl = (process.env.APP_URL || '').replace(/\/$/, '');
   const expires = new Date(invite.expires_at).toLocaleDateString(req.lang === 'en' ? 'en-US' : 'es-ES');
   const roleWord = req.t(invite.role === 'reader' ? 'role_word_reader' : 'role_word_collaborator');
+  const assistantNumber = (process.env.ASSISTANT_WHATSAPP_NUMBER || '').trim();
   return req.t('wa_template', {
     inviter: inviterName, family: family.name, appUrl, code: invite.code, role: roleWord, expires,
+    assistantLine: assistantNumber ? req.t('wa_assistant_line', { assistantNumber }) : '',
   });
 }
 

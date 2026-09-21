@@ -47,9 +47,10 @@ Legado Vivo es el archivo privado de tu familia:
    | `BRIDGE_API_KEY` | *(genera una larga y única)* | Clave del puente con el Asistente |
    | `UPLOAD_DIR` | `/data/uploads` | Carpeta del Volume |
    | `OPENAI_API_KEY` | *(opcional)* | Historias y búsqueda conversacional |
+   | `ASSISTANT_WHATSAPP_NUMBER` | `+1 555-153-9713` | Número del Asistente Puente que se agrega al mensaje de invitación (si se deja vacío, la línea no aparece) |
    | `NODE_ENV` | `production` | Cookies seguras |
 6. **Genera el dominio.** *Settings → Networking → Generate Domain*. Esa es tu `APP_URL`.
-7. **Despliega.** Railway instala dependencias (`npm install`), arranca con `npm start`
+7. **Despliega.** Railway instala dependencias (`npm install`), arranca con `node server.js`
    y ejecuta las migraciones automáticamente. Abre la URL y crea tu cuenta.
 
 ### 3. Invitar por WhatsApp
@@ -138,9 +139,10 @@ Legado Vivo is your family's private archive:
    | `BRIDGE_API_KEY` | *(generate a long unique one)* | Assistant bridge key |
    | `UPLOAD_DIR` | `/data/uploads` | Volume folder |
    | `OPENAI_API_KEY` | *(optional)* | Stories + conversational search |
+   | `ASSISTANT_WHATSAPP_NUMBER` | `+1 555-153-9713` | Puente Assistant number added to the invitation message (if empty, the line is omitted) |
    | `NODE_ENV` | `production` | Secure cookies |
 6. **Generate the domain.** *Settings → Networking → Generate Domain*. That's your `APP_URL`.
-7. **Deploy.** Railway runs `npm install`, starts with `npm start` and applies
+7. **Deploy.** Railway runs `npm install`, starts with `node server.js` and applies
    migrations automatically. Open the URL and create your account.
 
 ### 3. Invite via WhatsApp
@@ -231,8 +233,4 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
-- Versión 1.2.0 — 2026-09-21. Incluye corrección de Cronología, manejo seguro de
-  errores `async` con Express 5, validación de archivos, cabeceras de seguridad y
-  healthcheck de PostgreSQL. / *Version 1.2.0 — 2026-09-21. Includes the Timeline
-  route fix, safe async error handling with Express 5, file validation, security
-  headers, and a PostgreSQL-aware healthcheck.*
+- Versión 1.1.0 — 2026-09-20.
