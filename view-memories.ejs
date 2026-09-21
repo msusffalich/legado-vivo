@@ -1,0 +1,19 @@
+<%- include('view-inc-familytabs', { tab: 'memories' }) %>
+<div class="row between">
+  <h1><%= t('memories') %></h1>
+  <p>
+    <% if (canWrite) { %><a class="btn" href="/families/<%= family.id %>/memories/new"><%= t('new_memory') %></a><% } %>
+    <a class="btn ghost small" href="/families/<%= family.id %>/memories"><%= t('all') %></a>
+    <a class="btn ghost small" href="/families/<%= family.id %>/memories?status=pending">⏳ <%= t('status_pending') %></a>
+  </p>
+</div>
+<% if (!memories.length) { %><p class="muted"><%= t('no_memories') %></p><% } %>
+<div class="grid">
+<% memories.forEach(function(m) { %>
+  <a class="card memcard" href="/families/<%= family.id %>/memories/<%= m.id %>">
+    <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% } %>
+    <h4><%= m.title %></h4>
+    <p class="muted small"><%= fmtMemDate(m) %><% if (m.status === 'pending') { %> · ⏳ <%= t('status_pending') %><% } %></p>
+  </a>
+<% }); %>
+</div>

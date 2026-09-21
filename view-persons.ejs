@@ -1,0 +1,43 @@
+<%- include('view-inc-familytabs', { tab: 'persons' }) %>
+<div class="row between">
+  <h1><%= t('persons') %></h1>
+</div>
+
+<% if (canWrite) { %>
+<div class="card">
+  <h3><%= t('new_person') %></h3>
+  <form class="rowform" method="post" action="/families/<%= family.id %>/persons">
+    <label><%= t('person_name') %> *<input name="name" required maxlength="120"></label>
+    <label><%= t('relationship') %><input name="relationship" maxlength="120"></label>
+    <label><%= t('notes') %><input name="notes" maxlength="500"></label>
+    <button class="btn" type="submit"><%= t('add_person') %></button>
+  </form>
+</div>
+<% } %>
+
+<% if (!persons.length) { %><p class="muted"><%= t('no_persons') %></p><% } %>
+<div class="grid">
+<% persons.forEach(function(p) { %>
+  <div class="card">
+    <h3><%= p.name %></h3>
+    <% if (p.relationship) { %><p class="muted"><%= p.relationship %></p><% } %>
+    <% if (p.notes) { %><p><%= p.notes %></p><% } %>
+    <% if (counts[p.id]) { %><p class="small muted"><%= counts[p.id] %> · <%= t('memories') %></p><% } %>
+    <% if (canWrite) { %>
+    <details>
+      <summary><%= t('edit') %></summary>
+      <form method="post" action="/families/<%= family.id %>/persons/<%= p.id %>">
+        <label><%= t('person_name') %> *<input name="name" value="<%= p.name %>" required></label>
+        <label><%= t('relationship') %><input name="relationship" value="<%= p.relationship %>"></label>
+        <label><%= t('notes') %><textarea name="notes" rows="2"><%= p.notes %></textarea></label>
+        <button class="btn small" type="submit"><%= t('save') %></button>
+      </form>
+      <form method="post" action="/families/<%= family.id %>/persons/<%= p.id %>/delete" class="mt">
+        <label><%= t('delete_person_confirm', { name: p.name }) %><input name="confirmName" required></label>
+        <button class="btn small danger" type="submit"><%= t('delete_person') %></button>
+      </form>
+    </details>
+    <% } %>
+  </div>
+<% }); %>
+</div>

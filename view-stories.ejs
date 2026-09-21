@@ -1,0 +1,15 @@
+<%- include('view-inc-familytabs', { tab: 'stories' }) %>
+<div class="row between">
+  <h1><%= t('stories') %></h1>
+  <% if (canWrite) { %><a class="btn" href="/families/<%= family.id %>/stories/new"><%= t('new_story') %></a><% } %>
+</div>
+<% if (!stories.length) { %><p class="muted"><%= t('no_stories') %></p><% } %>
+<div class="grid">
+<% stories.forEach(function(s) { %>
+  <a class="card" href="/families/<%= family.id %>/stories/<%= s.id %>">
+    <h3><%= s.title %></h3>
+    <p class="muted small"><%= fmtDate(s.created_at) %><% if (s.author) { %> · <%= s.author %><% } %></p>
+    <p><%= s.content.length > 160 ? s.content.slice(0, 160) + '…' : s.content %></p>
+  </a>
+<% }); %>
+</div>

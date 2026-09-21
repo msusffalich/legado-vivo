@@ -1,0 +1,12 @@
+<div class="card narrow">
+  <h1><%= t('register_title') %></h1>
+  <% if (error) { %><p class="err"><%= error %></p><% } %>
+  <form method="post" action="/register">
+    <input type="hidden" name="next" value="<%= next %>">
+    <label><%= t('name') %> *<input name="name" required autocomplete="name"></label>
+    <label><%= t('email') %> *<input name="email" type="email" required autocomplete="email"></label>
+    <label><%= t('password') %> *<input name="password" type="password" required minlength="6" autocomplete="new-password"></label>
+    <button class="btn" type="submit"><%= t('register_btn') %></button>
+  </form>
+  <p class="muted"><%= t('already_have_account') %> <a href="/login<%= next ? '?next=' + encodeURIComponent(next) : '' %>"><%= t('login_btn') %></a></p>
+</div>

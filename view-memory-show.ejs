@@ -1,0 +1,42 @@
+<%- include('view-inc-familytabs', { tab: 'memories' }) %>
+<div class="row between">
+  <h1><%= memory.title %></h1>
+  <p>
+    <% if (canWrite) { %>
+      <a class="btn small" href="/families/<%= family.id %>/memories/<%= memory.id %>/edit"><%= t('edit') %></a>
+      <form class="inline" method="post" action="/families/<%= family.id %>/memories/<%= memory.id %>/delete"
+            onsubmit="return confirm('<%= t('delete_memory_confirm') %>')">
+        <button class="btn small danger" type="submit"><%= t('delete') %></button>
+      </form>
+    <% } %>
+    <a class="btn ghost small" href="/families/<%= family.id %>/memories"><%= t('back') %></a>
+  </p>
+</div>
+
+<% if (memory.status === 'pending') { %><p class="flash">⏳ <%= t('pending_hint') %></p><% } %>
+
+<div class="card">
+  <p class="muted small"><%= fmtMemDate(memory) %><% if (memory.place) { %> · <%= memory.place %><% } %>
+    <% if (author) { %> · <%= t('memory_by', { name: author }) %><% } %></p>
+  <% if (memory.photo_path) { %><img class="bigimg" src="<%= memory.photo_path %>" alt=""><% } %>
+  <% if (memory.story) { %><p class="story"><%= memory.story %></p><% } %>
+  <% if (memory.transcription) { %>
+    <h4><%= t('transcription_label') %></h4><p class="story muted"><%= memory.transcription %></p><% } %>
+  <% if (persons.length) { %>
+    <h4><%= t('people_label') %></h4>
+    <p><% persons.forEach(function(p, i) { %><span class="pill"><%= p.name %></span><% }); %></p><% } %>
+  <% if (memory.audio_path) { %>
+    <h4><%= t('audio_label') %></h4>
+    <audio controls src="<%= memory.audio_path %>"></audio><% } %>
+</div>
+
+<% if (versions.length) { %>
+<div class="card">
+  <h3><%= t('version_history') %> (<%= versions.length %>)</h3>
+  <ul>
+  <% versions.forEach(function(v) { %>
+    <li class="muted small"><%= t('version_of', { date: fmtDateTime(v.created_at) }) %></li>
+  <% }); %>
+  </ul>
+</div>
+<% } %>

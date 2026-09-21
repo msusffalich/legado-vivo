@@ -1,0 +1,9 @@
+<div class="card narrow">
+  <h1><%= t('new_family_title') %></h1>
+  <form method="post" action="/families">
+    <label><%= t('family_name') %> *<input name="name" required maxlength="120"></label>
+    <label><%= t('family_description') %><textarea name="description" rows="3"></textarea></label>
+    <button class="btn" type="submit"><%= t('create_family') %></button>
+    <a class="btn ghost" href="/dashboard"><%= t('cancel') %></a>
+  </form>
+</div>

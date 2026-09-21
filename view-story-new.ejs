@@ -1,0 +1,32 @@
+<%- include('view-inc-familytabs', { tab: 'stories' }) %>
+<h1><%= t('new_story') %></h1>
+
+<% if (!ai) { %>
+  <div class="card highlight"><strong><%= t('ai_unavailable_title') %>.</strong> <%= t('ai_unavailable_desc') %></div>
+<% } %>
+
+<% if (memories.length) { %>
+<div class="card">
+  <h3><%= t('select_memories') %></h3>
+  <form method="post" action="/families/<%= family.id %>/stories/generate">
+    <div class="checks">
+    <% memories.forEach(function(m) { %>
+      <label class="check"><input type="checkbox" name="memory_ids" value="<%= m.id %>"> <strong><%= m.title %></strong> <span class="muted small"><%= fmtMemDate(m) %></span></label>
+    <% }); %>
+    </div>
+    <% if (ai) { %><button class="btn" type="submit"><%= t('generate_btn') %></button><% } %>
+  </form>
+</div>
+<% } %>
+
+<div class="card">
+  <h3><%= t('write_manually') %></h3>
+  <form method="post" action="/families/<%= family.id %>/stories">
+    <% selected.forEach(function(id) { %><input type="hidden" name="memory_ids" value="<%= id %>"><% }); %>
+    <label><%= t('story_title_label') %> *<input name="title" value="<%= title %>" required maxlength="200"></label>
+    <label><%= t('content_label') %> *<textarea name="content" rows="10" required><%= content %></textarea></label>
+    <% if (generated) { %><p class="muted small"><%= t('generated_with_ai', { n: selected.length }) %></p><% } %>
+    <button class="btn" type="submit"><%= t('save_story') %></button>
+    <a class="btn ghost" href="/families/<%= family.id %>/stories"><%= t('cancel') %></a>
+  </form>
+</div>

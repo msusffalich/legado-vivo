@@ -1,0 +1,17 @@
+<section class="hero">
+  <h1><%= t('home_title') %></h1>
+  <p class="lede"><%= t('home_subtitle') %></p>
+  <p class="cta">
+    <a class="btn big" href="/register"><%= t('home_cta_register') %></a>
+    <a class="btn ghost big" href="/login"><%= t('home_cta_login') %></a>
+  </p>
+  <% if (typeof deleted !== 'undefined' && deleted) { %><p class="flash"><%= t('account_deleted') %></p><% } %>
+</section>
+<section>
+  <h2><%= t('home_how') %></h2>
+  <div class="steps">
+    <div class="card"><h3><%= t('home_s1t') %></h3><p><%= t('home_s1d') %></p></div>
+    <div class="card"><h3><%= t('home_s2t') %></h3><p><%= t('home_s2d') %></p></div>
+    <div class="card"><h3><%= t('home_s3t') %></h3><p><%= t('home_s3d') %></p></div>
+  </div>
+</section>

@@ -1,0 +1,20 @@
+<div class="row between">
+  <h1><%= t('dashboard_title') %></h1>
+  <p><a class="btn" href="/families/new"><%= t('new_family_btn') %></a>
+     <a class="btn ghost" href="/join"><%= t('join_with_code_btn') %></a></p>
+</div>
+<% if (!families.length) { %>
+  <div class="card">
+    <p><%= t('no_families') %></p>
+    <p class="muted"><%= t('no_families_hint') %></p>
+  </div>
+<% } %>
+<div class="grid">
+<% families.forEach(function(f) { %>
+  <a class="card famcard" href="/families/<%= f.id %>">
+    <h3><%= f.name %></h3>
+    <p class="muted"><%= t('members_count', { n: f.members }) %> · <%= roleName(f.role) %></p>
+    <% if (f.description) { %><p><%= f.description %></p><% } %>
+  </a>
+<% }); %>
+</div>

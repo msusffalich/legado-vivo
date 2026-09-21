@@ -1,0 +1,24 @@
+<div class="card narrow">
+  <h1><%= t('join_title') %></h1>
+  <% if (error) { %><p class="err"><%= error %></p><% } %>
+  <% if (!invite) { %>
+    <form method="get" action="/join">
+      <label><%= t('join_code_label') %> *<input name="code" value="<%= code %>" required placeholder="LV-XXXXXXXX" style="text-transform:uppercase"></label>
+      <button class="btn" type="submit"><%= t('join_btn') %></button>
+    </form>
+  <% } else if (!loggedIn) { %>
+    <p><%= t('join_invites_you', { family: invite.family_name, role: roleName(invite.role) }) %></p>
+    <p class="muted"><%= t('join_login_needed') %></p>
+    <form method="post" action="/join/remember">
+      <input type="hidden" name="code" value="<%= invite.code %>">
+      <button class="btn" type="submit"><%= t('register_btn') %></button>
+      <a class="btn ghost" href="/login?next=<%= encodeURIComponent('/join?code=' + invite.code) %>"><%= t('login_btn') %></a>
+    </form>
+  <% } else { %>
+    <p><%= t('join_invites_you', { family: invite.family_name, role: roleName(invite.role) }) %></p>
+    <form method="post" action="/join/accept">
+      <input type="hidden" name="code" value="<%= invite.code %>">
+      <button class="btn big" type="submit"><%= t('join_accept') %></button>
+    </form>
+  <% } %>
+</div>

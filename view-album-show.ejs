@@ -1,0 +1,24 @@
+<%- include('view-inc-familytabs', { tab: 'workshop' }) %>
+<div class="row between">
+  <h1>📖 <%= album.title %></h1>
+  <p>
+    <a class="btn" href="/families/<%= family.id %>/workshop/<%= album.id %>/download"><%= t('download_pdf') %></a>
+    <% if (canWrite) { %>
+    <form class="inline" method="post" action="/families/<%= family.id %>/workshop/<%= album.id %>/delete"
+          onsubmit="return confirm('<%= t('delete_album') %>?')">
+      <button class="btn small danger" type="submit"><%= t('delete') %></button>
+    </form>
+    <% } %>
+    <a class="btn ghost small" href="/families/<%= family.id %>/workshop"><%= t('back') %></a>
+  </p>
+</div>
+<p class="muted"><%= t('album_contains', { n: memories.length }) %></p>
+<div class="grid">
+<% memories.forEach(function(m) { %>
+  <a class="card memcard" href="/families/<%= family.id %>/memories/<%= m.id %>">
+    <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% } %>
+    <h4><%= m.title %></h4>
+    <p class="muted small"><%= fmtMemDate(m) %></p>
+  </a>
+<% }); %>
+</div>

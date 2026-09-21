@@ -1,0 +1,15 @@
+<%- include('view-inc-familytabs', { tab: 'workshop' }) %>
+<div class="row between">
+  <h1><%= t('workshop') %></h1>
+  <% if (canWrite) { %><a class="btn" href="/families/<%= family.id %>/workshop/new"><%= t('new_album') %></a><% } %>
+</div>
+<p class="muted"><%= t('album_hint') %></p>
+<% if (!albums.length) { %><p class="muted"><%= t('no_albums') %></p><% } %>
+<div class="grid">
+<% albums.forEach(function(a) { %>
+  <a class="card" href="/families/<%= family.id %>/workshop/<%= a.id %>">
+    <h3>📖 <%= a.title %></h3>
+    <p class="muted small"><%= t('album_contains', { n: a.count }) %> · <%= t('created_on', { date: fmtDate(a.created_at) }) %></p>
+  </a>
+<% }); %>
+</div>

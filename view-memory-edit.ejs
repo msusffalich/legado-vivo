@@ -1,0 +1,50 @@
+<%- include('view-inc-familytabs', { tab: 'memories' }) %>
+<h1><%= t('edit_memory') %></h1>
+<div class="card">
+<form method="post" action="/families/<%= family.id %>/memories/<%= memory.id %>" enctype="multipart/form-data">
+  <label><%= t('memory_title') %> *<input name="title" required maxlength="200" value="<%= memory.title %>"></label>
+  <div class="two">
+    <label><%= t('photo_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="photo" accept="image/*"></label>
+    <label><%= t('audio_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="audio" accept="audio/*"></label>
+  </div>
+  <label><%= t('transcription_label') %><textarea name="transcription" rows="3"><%= memory.transcription %></textarea></label>
+  <label><%= t('story_label') %><textarea id="story" name="story" rows="6"><%= memory.story %></textarea></label>
+  <details class="interview">
+    <summary><strong><%= t('interview_title') %></strong></summary>
+    <label><%= t('iq_see') %><textarea name="iq_see" rows="2"><%= memory.interview && memory.interview.see ? memory.interview.see : '' %></textarea></label>
+    <label><%= t('iq_who') %><textarea name="iq_who" rows="2"><%= memory.interview && memory.interview.who ? memory.interview.who : '' %></textarea></label>
+    <label><%= t('iq_where') %><input name="iq_where" value="<%= memory.interview && memory.interview.where ? memory.interview.where : '' %>"></label>
+    <label><%= t('iq_when') %><input name="iq_when" value="<%= memory.interview && memory.interview.when ? memory.interview.when : '' %>"></label>
+    <label><%= t('iq_remember') %><textarea name="iq_remember" rows="3"><%= memory.interview && memory.interview.remember ? memory.interview.remember : '' %></textarea></label>
+    <button class="btn ghost small" type="button" onclick="addInterview()"><%= t('add_answers') %></button>
+  </details>
+  <div class="two">
+    <label><%= t('place_label') %><input name="place" maxlength="200" value="<%= memory.place %>"></label>
+    <label><%= t('date_label') %><input type="date" name="memory_date" value="<%= memDateISO(memory) %>"></label>
+  </div>
+  <label><%= t('date_precision') %>
+    <select name="date_precision">
+      <option value="unknown"<%= memory.date_precision === 'unknown' ? ' selected' : '' %>><%= t('precision_unknown') %></option>
+      <option value="exact"<%= memory.date_precision === 'exact' ? ' selected' : '' %>><%= t('precision_exact') %></option>
+      <option value="approx"<%= memory.date_precision === 'approx' ? ' selected' : '' %>><%= t('precision_approx') %></option>
+    </select>
+  </label>
+  <label><%= t('status') %>
+    <select name="status">
+      <option value="complete"<%= memory.status === 'complete' ? ' selected' : '' %>><%= t('status_complete') %></option>
+      <option value="pending"<%= memory.status === 'pending' ? ' selected' : '' %>><%= t('status_pending') %></option>
+    </select>
+  </label>
+  <% if (persons.length) { %>
+  <fieldset><legend><%= t('people_label') %></legend>
+    <div class="checks">
+    <% persons.forEach(function(p) { %>
+      <label class="check"><input type="checkbox" name="person_ids" value="<%= p.id %>"<%= linked.includes(p.id) ? ' checked' : '' %>> <%= p.name %></label>
+    <% }); %>
+    </div>
+  </fieldset>
+  <% } %>
+  <p><button class="btn" type="submit"><%= t('save') %></button>
+  <a class="btn ghost" href="/families/<%= family.id %>/memories/<%= memory.id %>"><%= t('cancel') %></a></p>
+</form>
+</div>

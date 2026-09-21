@@ -1,0 +1,48 @@
+<%- include('view-inc-familytabs', { tab: 'invites' }) %>
+<h1><%= t('invites') %></h1>
+
+<div class="card">
+  <h3><%= t('new_invite') %></h3>
+  <form class="rowform" method="post" action="/families/<%= family.id %>/invites">
+    <label><%= t('invite_role') %>
+      <select name="role">
+        <option value="collaborator"><%= t('collaborator') %> — <%= t('role_collab_desc') %></option>
+        <option value="reader"><%= t('reader') %> — <%= t('role_reader_desc') %></option>
+      </select>
+    </label>
+    <button class="btn" type="submit"><%= t('generate_invite') %></button>
+  </form>
+</div>
+
+<% if (waMessage) { %>
+<div class="card highlight">
+  <h3><%= t('invite_wa_message') %> — <code><%= waCode %></code></h3>
+  <textarea id="wamsg" rows="9" readonly><%= waMessage %></textarea>
+  <p class="rowform">
+    <button class="btn" type="button" onclick="copyWa()"><%= t('copy_message') %></button>
+    <a class="btn ghost" target="_blank" rel="noopener"
+       href="https://wa.me/?text=<%= encodeURIComponent(waMessage) %>"><%= t('open_in_whatsapp') %></a>
+  </p>
+</div>
+<% } %>
+
+<h3><%= t('invites') %></h3>
+<% if (!invites.length) { %><p class="muted"><%= t('no_invites') %></p><% } %>
+<table class="tbl">
+  <tr><th><%= t('invite_code') %></th><th><%= t('role') %></th><th><%= t('valid_until') %></th><th></th><th></th></tr>
+  <% invites.forEach(function(i) { %>
+    <tr>
+      <td><code><%= i.code %></code></td>
+      <td><%= roleName(i.role) %></td>
+      <td class="muted"><%= fmtDate(i.expires_at) %></td>
+      <td><span class="pill <%= i.status %>"><%= t('invite_' + i.status) %></span></td>
+      <td>
+        <% if (i.status === 'active') { %>
+        <form class="inline" method="post" action="/families/<%= family.id %>/invites/<%= i.id %>/revoke">
+          <button class="linkbtn danger" type="submit"><%= t('revoke') %></button>
+        </form>
+        <% } %>
+      </td>
+    </tr>
+  <% }); %>
+</table>

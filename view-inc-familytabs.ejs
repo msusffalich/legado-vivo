@@ -1,0 +1,20 @@
+<% const tabs = [
+  ['memories', 'family_tab_memories', '/memories'],
+  ['timeline', 'family_tab_timeline', '/memories/timeline/view'],
+  ['persons', 'family_tab_persons', '/persons'],
+  ['stories', 'family_tab_stories', '/stories'],
+  ['workshop', 'family_tab_workshop', '/workshop'],
+  ['search', 'family_tab_search', '/search'],
+  ['invites', 'family_tab_invites', '/invites'],
+  ['members', 'family_tab_members', null],
+  ['settings', 'family_tab_settings', null],
+]; %>
+<nav class="tabs">
+<% tabs.forEach(function(tb) {
+  const key = tb[0], label = tb[1], path = tb[2];
+  if ((key === 'invites' || key === 'members' || key === 'settings') && membership.role !== 'admin') return;
+  const href = path ? '/families/' + family.id + path : '/families/' + family.id + '?tab=' + key;
+%>
+  <a href="<%= href %>" class="<%= (typeof tab !== 'undefined' && tab === key) ? 'active' : '' %>"><%= t(label) %></a>
+<% }); %>
+</nav>

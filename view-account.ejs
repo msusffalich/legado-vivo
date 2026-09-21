@@ -1,0 +1,24 @@
+<h1><%= t('account_title') %></h1>
+<% if (msg) { %><p class="flash"><%= msg %></p><% } %>
+<% if (error) { %><p class="err"><%= error %></p><% } %>
+<div class="card">
+  <form method="post" action="/account">
+    <label><%= t('name') %> *<input name="name" value="<%= user.name %>" required></label>
+    <label><%= t('email') %><input value="<%= user.email %>" disabled></label>
+    <label><%= t('language') %>
+      <select name="lang">
+        <option value="es"<%= lang === 'es' ? ' selected' : '' %>>Español</option>
+        <option value="en"<%= lang === 'en' ? ' selected' : '' %>>English</option>
+      </select>
+    </label>
+    <button class="btn" type="submit"><%= t('update_profile') %></button>
+  </form>
+</div>
+<div class="card danger-zone">
+  <h3><%= t('danger_zone') %></h3>
+  <p class="muted"><%= t('delete_account_confirm') %></p>
+  <form method="post" action="/account/delete">
+    <label><%= t('type_your_name') %><input name="confirmName" required></label>
+    <button class="btn danger" type="submit"><%= t('delete_account') %></button>
+  </form>
+</div>

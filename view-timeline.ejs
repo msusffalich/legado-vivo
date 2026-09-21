@@ -1,0 +1,17 @@
+<%- include('view-inc-familytabs', { tab: 'timeline' }) %>
+<h1><%= t('timeline_title') %></h1>
+<p class="muted"><%= t('timeline_hint') %></p>
+<% if (!memories.length) { %><p class="muted"><%= t('no_memories') %></p><% } %>
+<div class="timeline">
+<% memories.forEach(function(m) { %>
+  <div class="titem">
+    <div class="tdot"></div>
+    <div class="tdate"><%= fmtMemDate(m) %></div>
+    <a class="card tcard" href="/families/<%= family.id %>/memories/<%= m.id %>">
+      <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% } %>
+      <h4><%= m.title %></h4>
+      <% if (m.people_names) { %><p class="muted small"><%= m.people_names %></p><% } %>
+    </a>
+  </div>
+<% }); %>
+</div>

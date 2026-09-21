@@ -1,0 +1,14 @@
+<%- include('view-inc-familytabs', { tab: 'stories' }) %>
+<div class="row between">
+  <h1><%= story.title %></h1>
+  <a class="btn ghost small" href="/families/<%= family.id %>/stories"><%= t('back') %></a>
+</div>
+<div class="card">
+  <p class="muted small"><%= fmtDateTime(story.created_at) %><% if (story.author) { %> · <%= story.author %><% } %></p>
+  <p class="story"><%= story.content %></p>
+  <% const srcs = Array.isArray(story.sources) ? story.sources : []; %>
+  <% if (srcs.length) { %>
+    <h4><%= t('sources') %></h4>
+    <ul><% srcs.forEach(function(s) { %><li><a href="/families/<%= family.id %>/memories/<%= s.id %>"><%= s.title %></a></li><% }); %></ul>
+  <% } %>
+</div>

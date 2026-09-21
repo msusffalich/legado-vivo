@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="<%= lang %>">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= (typeof title !== 'undefined' && title ? title + ' · ' : '') + t('app_name') %></title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="<%= user ? '/dashboard' : '/' %>">🌳 <%= t('app_name') %></a>
+  <nav class="topnav">
+    <% if (user) { %>
+      <a href="/dashboard"><%= t('nav_dashboard') %></a>
+      <a href="/help"><%= t('nav_help') %></a>
+      <a href="/account"><%= t('nav_account') %></a>
+      <form class="inline" method="post" action="/lang" title="<%= t('lang_label') %>">
+        <select name="lang" onchange="this.form.submit()" aria-label="<%= t('lang_label') %>">
+          <option value="es"<%= lang === 'es' ? ' selected' : '' %>>ES</option>
+          <option value="en"<%= lang === 'en' ? ' selected' : '' %>>EN</option>
+        </select>
+      </form>
+      <form class="inline" method="post" action="/logout"><button class="linkbtn" type="submit"><%= t('nav_logout') %></button></form>
+    <% } else { %>
+      <a href="/help"><%= t('nav_help') %></a>
+      <form class="inline" method="post" action="/lang" title="<%= t('lang_label') %>">
+        <select name="lang" onchange="this.form.submit()" aria-label="<%= t('lang_label') %>">
+          <option value="es"<%= lang === 'es' ? ' selected' : '' %>>ES</option>
+          <option value="en"<%= lang === 'en' ? ' selected' : '' %>>EN</option>
+        </select>
+      </form>
+      <a href="/login"><%= t('nav_login') %></a>
+      <a class="btn small" href="/register"><%= t('nav_register') %></a>
+    <% } %>
+  </nav>
+</header>
+<main class="wrap">
+  <% if (typeof flash !== 'undefined' && flash) { %><div class="flash"><%= flash %></div><% } %>
+  <%- include(page) %>
+</main>
+<footer class="foot"><%= t('app_name') %> · <%= t('footer_note') %></footer>
+<script src="/assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<%- include('view-inc-familytabs', { tab: 'search' }) %>
+<h1><%= t('search') %> <%= t('search_results_in') %> <%= family.name %></h1>
+<div class="card">
+  <form method="get" action="/families/<%= family.id %>/search" class="rowform">
+    <input name="q" value="<%= q %>" placeholder="<%= t('search_placeholder') %>" style="flex:1" required>
+    <button class="btn" type="submit"><%= t('search_btn') %></button>
+  </form>
+  <% if (ai && q) { %>
+  <form method="get" action="/families/<%= family.id %>/search" class="mt">
+    <input type="hidden" name="q" value="<%= q %>">
+    <input type="hidden" name="chat" value="1">
+    <button class="btn ghost" type="submit">💬 <%= t('ask_ai') %>: “<%= q %>”</button>
+  </form>
+  <% } %>
+</div>
+
+<% if (q && !ai && chat) { %><p class="flash"><%= t('ai_search_unavailable') %></p><% } %>
+
+<% if (answer) { %>
+<div class="card highlight">
+  <h3>💬 <%= t('ai_answer') %></h3>
+  <p class="story"><%= answer %></p>
+</div>
+<% } %>
+
+<% if (q) { %>
+  <% if (!memories.length && !persons.length && !stories.length) { %>
+    <p class="muted"><%= t('no_results', { q: q }) %></p>
+  <% } %>
+  <% if (memories.length) { %>
+    <h3><%= t('memories') %> (<%= memories.length %>)</h3>
+    <div class="grid">
+    <% memories.forEach(function(m) { %>
+      <a class="card memcard" href="/families/<%= family.id %>/memories/<%= m.id %>">
+        <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% } %>
+        <h4><%= m.title %></h4><p class="muted small"><%= fmtMemDate(m) %></p>
+      </a>
+    <% }); %>
+    </div>
+  <% } %>
+  <% if (persons.length) { %>
+    <h3><%= t('persons') %> (<%= persons.length %>)</h3>
+    <ul><% persons.forEach(function(p) { %><li><a href="/families/<%= family.id %>/persons"><%= p.name %></a><% if (p.relationship) { %> <span class="muted"><%= p.relationship %></span><% } %></li><% }); %></ul>
+  <% } %>
+  <% if (stories.length) { %>
+    <h3><%= t('stories') %> (<%= stories.length %>)</h3>
+    <ul><% stories.forEach(function(s) { %><li><a href="/families/<%= family.id %>/stories/<%= s.id %>"><%= s.title %></a></li><% }); %></ul>
+  <% } %>
+<% } %>

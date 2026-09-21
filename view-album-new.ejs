@@ -1,0 +1,15 @@
+<%- include('view-inc-familytabs', { tab: 'workshop' }) %>
+<h1><%= t('new_album') %></h1>
+<div class="card">
+<form method="post" action="/families/<%= family.id %>/workshop">
+  <label><%= t('album_title') %> *<input name="title" required maxlength="200" placeholder="<%= t('album_hint') %>"></label>
+  <h3><%= t('select_memories_album') %></h3>
+  <div class="checks">
+  <% memories.forEach(function(m) { %>
+    <label class="check"><input type="checkbox" name="memory_ids" value="<%= m.id %>"> <strong><%= m.title %></strong> <span class="muted small"><%= fmtMemDate(m) %></span></label>
+  <% }); %>
+  </div>
+  <p><button class="btn" type="submit"><%= t('create_album') %></button>
+  <a class="btn ghost" href="/families/<%= family.id %>/workshop"><%= t('cancel') %></a></p>
+</form>
+</div>
