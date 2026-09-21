@@ -33,18 +33,7 @@ async function main() {
   // heredadas todavía usan manejadores inline (onclick/onchange).
   app.use(helmet({ contentSecurityPolicy: false }));
 
-  // Mitiga CSRF en formularios web: los navegadores envían Origin en POST.
-  // Clientes servidor-a-servidor (por ejemplo, el puente) normalmente no lo envían.
-  app.use((req, res, next) => {
-    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
-    const origin = req.get('origin');
-    if (!origin) return next();
-    const expected = `${req.protocol}://${req.get('host')}`;
-    if (origin !== expected) return res.status(403).send('Origen no permitido');
-    next();
-  });
-
-  app.use(session({
+   app.use(session({
     store: new pgSession({ pool: db.pool, tableName: 'session', createTableIfMissing: false }),
     secret: process.env.SESSION_SECRET || 'dev-secret-cambialo',
     resave: false,
