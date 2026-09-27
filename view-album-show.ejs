@@ -4,6 +4,7 @@
   <p>
     <a class="btn" href="/families/<%= family.id %>/workshop/<%= album.id %>/download"><%= t('download_pdf') %></a>
     <% if (canWrite) { %>
+    <a class="btn small" href="/families/<%= family.id %>/workshop/<%= album.id %>/edit"><%= t('edit_album') %></a>
     <form class="inline" method="post" action="/families/<%= family.id %>/workshop/<%= album.id %>/delete"
           onsubmit="return confirm('<%= t('delete_album') %>?')">
       <button class="btn small danger" type="submit"><%= t('delete') %></button>
@@ -13,6 +14,7 @@
   </p>
 </div>
 <p class="muted"><%= memories.length === 1 ? t('one_memory') : t('memories_count', { n: memories.length }) %></p>
+<p class="muted small"><%= t('by_author', { name: album.author_name || '—' }) %> · <%= t('created_on', { date: fmtDate(album.created_at) }) %> · <%= t('theme_' + (album.theme || 'general')) %></p>
 <% if (album.narrative) { %><div class="card"><p style="white-space:pre-wrap"><%= album.narrative %></p></div><% } %>
 <div class="grid">
 <% memories.forEach(function(m) { %>

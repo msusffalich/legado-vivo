@@ -1,10 +1,18 @@
 <%- include('view-inc-familytabs', { tab: 'workshop' }) %>
-<h1><%= t('new_album') %></h1>
+<h1><%= album ? t('edit_album') : t('new_album') %></h1>
 <div class="card">
-<form method="post" action="/families/<%= family.id %>/workshop" id="albumForm">
-  <label><%= t('album_title') %> *<input name="title" required maxlength="200" placeholder="<%= t('album_hint') %>"></label>
+<form method="post" action="<%= formAction || ('/families/' + family.id + '/workshop') %>" id="albumForm">
+  <label><%= t('album_title') %> *<input name="title" required maxlength="200" placeholder="<%= t('album_hint') %>" value="<%= album ? album.title : '' %>"></label>
   <label><%= t('album_narrative') %> <span class="muted small">(<%= t('optional') %>)</span>
-    <textarea name="narrative" rows="4" maxlength="5000" placeholder="<%= t('album_narrative_hint') %>"></textarea>
+    <textarea name="narrative" rows="4" maxlength="5000" placeholder="<%= t('album_narrative_hint') %>"><%= album && album.narrative ? album.narrative : '' %></textarea>
+  </label>
+  <label><%= t('album_theme') %>
+    <select name="theme">
+      <% ['general','familia','cumpleanos','navidad','viaje','boda'].forEach(function(id) { %>
+        <option value="<%= id %>"<%= (album && album.theme ? album.theme : 'general') === id ? ' selected' : '' %>><%= t('theme_' + id) %></option>
+      <% }); %>
+    </select>
+    <span class="muted small"><%= t('album_theme_hint') %></span>
   </label>
 
   <h3><%= t('select_memories_album') %></h3>
@@ -52,7 +60,7 @@
            else { %><span class="vthumb none">—</span><% } %>
       </span>
       <label class="picklabel">
-        <input type="checkbox" name="memory_ids" value="<%= m.id %>">
+        <input type="checkbox" name="memory_ids" value="<%= m.id %>"<%= album && Array.isArray(album.memory_ids) && album.memory_ids.includes(m.id) ? ' checked' : '' %>>
         <span><strong><%= m.title %></strong><br>
         <span class="muted small"><%= fmtMemDate(m) %><% if (m.people_names) { %> · <%= m.people_names %><% } %></span></span>
       </label>
@@ -64,8 +72,8 @@
   <% }); %>
   </div>
   <% if (!memories.length) { %><p class="muted"><%= t('no_memories') %></p><% } %>
-  <p><button class="btn" type="submit"><%= t('create_album') %></button>
-  <a class="btn ghost" href="/families/<%= family.id %>/workshop"><%= t('cancel') %></a></p>
+  <p><button class="btn" type="submit"><%= submitLabel || t('create_album') %></button>
+  <a class="btn ghost" href="<%= album ? ('/families/' + family.id + '/workshop/' + album.id) : ('/families/' + family.id + '/workshop') %>"><%= t('cancel') %></a></p>
 </form>
 </div>
 <script>

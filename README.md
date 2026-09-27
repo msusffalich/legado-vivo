@@ -30,8 +30,13 @@ Legado Vivo es el archivo privado de tu familia:
   El armador tiene filtros combinables (fechas, personas, tema/palabra clave), miniaturas
   de foto y video en la lista, y orden manual: arrastra con ⋮⋮ o usa ↑ ↓ — ese orden es el
   que sale en el PDF. También puedes escribir la *historia o narrativa del álbum*, que
-  aparece después de la portada. Los recuerdos con video aparecen con una imagen de su
-  primer cuadro.
+  aparece después de la portada, y elegir una *temática visual* que decora la portada
+  (General, Familia, Cumpleaños, Navidad, Viaje, Boda/Aniversario).
+  El PDF sale maquetado editorialmente: portada con título, autor y fecha, un recuerdo
+  por página (la imagen nunca se parte), cabecera con el título del álbum y número de
+  página. Los álbumes se guardan en la biblioteca del taller y se pueden volver a
+  **editar** (título, narrativa, temática, recuerdos y orden), descargar o eliminar.
+  Los recuerdos con video aparecen con una imagen de su primer cuadro.
 - **Búsqueda**: por palabras clave, o conversacional con IA si hay clave configurada.
 - **Asistente por WhatsApp**: manda foto + relato al número del asistente y el borrador entra
   al archivo como *pendiente de completar*.
@@ -129,8 +134,13 @@ Legado Vivo is your family's private archive:
   Each album is an *edition*: when you add memories, create a new edition.
   The builder has combinable filters (dates, people, theme/keyword), photo and video
   thumbnails in the list, and manual ordering: drag with ⋮⋮ or use ↑ ↓ — that order is
-  the one used in the PDF. You can also write the *album's story or narrative*, which
-  appears after the cover page. Video memories appear with a still image of their
+  the one used in the PDF. You can also write the *album's story or narrative*, shown
+  after the cover page, and pick a *visual theme* that decorates the cover
+  (General, Family, Birthday, Christmas, Trip, Wedding/Anniversary).
+  The PDF is editorially laid out: cover with title, author and date, one memory per
+  page (images never split), album-title header and page numbers. Albums are saved in
+  the workshop library and can be **edited** again (title, narrative, theme, memories
+  and order), downloaded or deleted. Video memories appear with a still image of their
   first frame.
 - **Search**: keyword search, or conversational AI search when a key is set.
 - **WhatsApp assistant**: send a photo + story to the assistant's number and the draft
@@ -304,3 +314,20 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   (`narrative` column, `migration-003.sql` migration), shown after the PDF cover page
   and on the album page. Grammar: singular "1 memory" instead of "1 memories".
   Individual stories are still edited inside each memory (Story field).*
+- 2026-09-27 (álbum PDF editorial + biblioteca editable + temáticas): el PDF se reescribió
+  con maquetación editorial — portada con título, autor y fecha sobre fondo decorado según
+  la temática elegida (General, Familia, Cumpleaños, Navidad, Viaje, Boda/Aniversario;
+  columna `theme`, migración `migration-004.sql`; motivos vectoriales: marco, puntos,
+  confeti, estrellas, olas, anillos), página de narrativa, un recuerdo por página con la
+  imagen arriba (nunca se parte ni queda huérfana), cabecera con el título del álbum en el
+  color de la temática y número de página al pie. La biblioteca del taller ahora permite
+  volver a **editar** cada álbum (título, narrativa, temática, recuerdos y orden),
+  además de descargarlo o eliminarlo. / *2026-09-27 (editorial album PDF + editable
+  library + themes): the PDF was rewritten with editorial layout — cover with title,
+  author and date over a theme-decorated background (General, Family, Birthday,
+  Christmas, Trip, Wedding/Anniversary; `theme` column, `migration-004.sql` migration;
+  vector motifs: frame, dots, confetti, stars, waves, rings), narrative page, one memory
+  per page with the image on top (never split or orphaned), album-title header in the
+  theme color and page numbers in the footer. The workshop library now lets you
+  **edit** each album again (title, narrative, theme, memories and order), besides
+  downloading or deleting it.*
