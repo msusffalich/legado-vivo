@@ -18,8 +18,8 @@ convierten en historias verificables y álbumes PDF por temas.
 Legado Vivo es el archivo privado de tu familia:
 
 - **Familias y roles**: crea varias familias; cada una con administrador, colaboradores y lectores.
-- **Recuerdos**: foto y/o audio, relato, transcripción, personas, lugar, fecha (exacta o aproximada)
-  y entrevista guiada. Estados: completo o *pendiente de completar*.
+- **Recuerdos**: foto, video (máx. 200 MB) y/o audio (máx. 100 MB), relato, transcripción, personas, lugar, fecha (exacta o aproximada)
+  y entrevista guiada. La subida muestra barra de progreso y avisa el motivo si falla. Estados: completo o *pendiente de completar*.
 - **Cronología**: ordenada por la fecha del recuerdo, no por la fecha de subida.
 - **Historias**: genera texto con IA (OpenAI, opcional) citando sus fuentes, o escríbelas manualmente.
 - **Taller**: selecciona recuerdos y genera álbumes PDF por tema (cumpleaños, Navidad, viajes…).
@@ -110,8 +110,8 @@ Necesitas PostgreSQL local con la base creada (`DATABASE_URL`).
 Legado Vivo is your family's private archive:
 
 - **Families & roles**: create several families; each with admin, collaborators and readers.
-- **Memories**: photo and/or audio, story, transcription, people, place, date (exact or
-  approximate) and a guided interview. Status: complete or *pending completion*.
+- **Memories**: photo, video (max 200 MB) and/or audio (max 100 MB), story, transcription, people, place, date (exact or
+  approximate) and a guided interview. Upload shows a progress bar and reports the reason if it fails. Status: complete or *pending completion*.
 - **Timeline**: ordered by the memory's date, not the upload date.
 - **Stories**: AI-generate text (OpenAI, optional) with cited sources, or write manually.
 - **Workshop**: pick memories and build themed PDF albums (birthdays, Christmas, trips…).
@@ -234,3 +234,13 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
 - Versión 1.1.0 — 2026-09-20.
+- 2026-09-27: la subida de recuerdos (nuevo/editar) muestra **barra de progreso** con % y
+  MB, y si falla muestra el **motivo** en tu idioma (archivo muy grande, tipo no permitido,
+  conexión cortada). Límite de **video subido a 200 MB** (foto/audio: 100 MB).
+  Todos los formatos de imagen y video habilitados: se acepta por tipo MIME o por
+  extensión (jpg, png, heic/heif, webp, avif, raw; mp4, mov, avi, mkv, webm, 3gp, mts, etc.). /
+  *2026-09-27: memory upload (new/edit) shows a **progress bar** with % and MB, and on
+  failure shows the **reason** in your language (file too large, type not allowed,
+  connection dropped). **Video limit raised to 200 MB** (photo/audio: 100 MB).
+  All image and video formats enabled: accepted by MIME type or extension
+  (jpg, png, heic/heif, webp, avif, raw; mp4, mov, avi, mkv, webm, 3gp, mts, etc.).*

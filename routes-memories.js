@@ -17,11 +17,24 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext);
   },
 });
+const VIDEO_MAX_MB = 200; // límite para video
+const MEDIA_MAX_MB = 100; // límite para foto y audio
+// Formatos aceptados por extensión (además del MIME que reporta el navegador,
+// que a veces viene vacío o genérico según el dispositivo).
+const IMAGE_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tif', 'tiff',
+  'heic', 'heif', 'avif', 'svg', 'ico', 'dng', 'cr2', 'nef', 'arw', 'rw2', 'orf', 'pef', 'srw', 'psd']);
+const VIDEO_EXT = new Set(['mp4', 'm4v', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv',
+  '3gp', '3g2', 'mts', 'm2ts', 'ts', 'mpg', 'mpeg', 'ogv']);
+const AUDIO_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'flac', 'wma',
+  'opus', 'aiff', 'aif', 'amr', '3ga']);
+const MEDIA_EXT = new Set([...IMAGE_EXT, ...VIDEO_EXT, ...AUDIO_EXT]);
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: VIDEO_MAX_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const ok = /^(image|audio|video)\//.test(file.mimetype);
+    const mimeOk = /^(image|audio|video)\//.test(file.mimetype || '');
+    const ext = path.extname(file.originalname || '').toLowerCase().replace(/^\./, '');
+    const ok = mimeOk || MEDIA_EXT.has(ext);
     cb(ok ? null : new Error('badtype'), ok);
   },
 });
@@ -30,6 +43,42 @@ const fields = upload.fields([
   { name: 'audio', maxCount: 1 },
   { name: 'video', maxCount: 1 },
 ]);
+
+function isXhr(req) {
+  return req.get('x-requested-with') === 'XMLHttpRequest' ||
+    String(req.get('accept') || '').includes('application/json');
+}
+
+function cleanupUploads(files) {
+  if (!files) return;
+  for (const arr of Object.values(files)) {
+    for (const f of arr || []) {
+      try { fs.unlinkSync(path.join(UPLOAD_DIR, f.filename)); } catch (e) { /* noop */ }
+    }
+  }
+}
+
+// Revisa que foto/audio no pasen de 100 MB (el video ya está limitado a 200 MB por multer).
+function checkMediaSizes(req) {
+  for (const name of ['photo', 'audio']) {
+    const f = req.files && req.files[name] && req.files[name][0];
+    if (f && f.size > MEDIA_MAX_MB * 1024 * 1024) return new Error('toobig:' + name);
+  }
+  return null;
+}
+
+// Responde el motivo de la falla: JSON para subida con progreso (XHR), flash+redirect para POST clásico.
+function uploadFail(req, res, err, fallback) {
+  let msg;
+  if (err && err.code === 'LIMIT_FILE_SIZE') msg = req.t('upload_too_large_generic');
+  else if (err && /^toobig:/.test(err.message || '')) msg = req.t('upload_too_large', { max: MEDIA_MAX_MB });
+  else if (err && err.message === 'badtype') msg = req.t('upload_bad_type');
+  else msg = req.t('error_generic');
+  cleanupUploads(req.files);
+  if (isXhr(req)) return res.status(400).json({ ok: false, error: msg });
+  req.session.flash = msg;
+  return res.redirect(fallback);
+}
 
 async function peopleNames(familyId, memoryId) {
   const { rows } = await db.query(
@@ -77,10 +126,13 @@ router.get('/new', canWrite, async (req, res) => {
 
 router.post('/', canWrite, (req, res, next) => {
   fields(req, res, (err) => {
-    if (err) { req.session.flash = req.t('error_generic'); return res.redirect(`/families/${req.family.id}/memories/new`); }
+    if (err) return uploadFail(req, res, err, `/families/${req.family.id}/memories/new`);
+    const sizeErr = checkMediaSizes(req);
+    if (sizeErr) return uploadFail(req, res, sizeErr, `/families/${req.family.id}/memories/new`);
     next();
   });
-}, async (req, res) => {
+}, async (req, res, next) => {
+  try {
   const b = req.body;
   const title = (b.title || '').trim() || (req.lang === 'en' ? 'Untitled memory' : 'Recuerdo sin título');
   const interview = {};
@@ -103,8 +155,15 @@ router.post('/', canWrite, (req, res, next) => {
   for (const pid of personIds(b)) {
     await db.query('INSERT INTO memory_people (memory_id, person_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [mid, pid]);
   }
+  const doneCreateUrl = `/families/${req.family.id}/memories/${mid}`;
+  if (isXhr(req)) return res.json({ ok: true, redirect: doneCreateUrl });
   req.session.flash = req.t('memory_created');
-  res.redirect(`/families/${req.family.id}/memories/${mid}`);
+  res.redirect(doneCreateUrl);
+  } catch (e) {
+    cleanupUploads(req.files);
+    if (isXhr(req)) return res.status(500).json({ ok: false, error: req.t('upload_server_error') });
+    return next(e);
+  }
 });
 
 // ---- Ver ----
@@ -142,10 +201,13 @@ router.get('/:mid/edit', canWrite, async (req, res) => {
 
 router.post('/:mid', canWrite, (req, res, next) => {
   fields(req, res, (err) => {
-    if (err) { req.session.flash = req.t('error_generic'); return res.redirect(`/families/${req.family.id}/memories/${req.params.mid}/edit`); }
+    if (err) return uploadFail(req, res, err, `/families/${req.family.id}/memories/${req.params.mid}/edit`);
+    const sizeErr = checkMediaSizes(req);
+    if (sizeErr) return uploadFail(req, res, sizeErr, `/families/${req.family.id}/memories/${req.params.mid}/edit`);
     next();
   });
-}, async (req, res) => {
+}, async (req, res, next) => {
+  try {
   const mid = parseInt(req.params.mid, 10);
   const { rows } = await db.query('SELECT * FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
@@ -173,8 +235,15 @@ router.post('/:mid', canWrite, (req, res, next) => {
   for (const pid of personIds(b)) {
     await db.query('INSERT INTO memory_people (memory_id, person_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [mid, pid]);
   }
+  const doneEditUrl = `/families/${req.family.id}/memories/${mid}`;
+  if (isXhr(req)) return res.json({ ok: true, redirect: doneEditUrl });
   req.session.flash = req.t('memory_updated');
-  res.redirect(`/families/${req.family.id}/memories/${mid}`);
+  res.redirect(doneEditUrl);
+  } catch (e) {
+    cleanupUploads(req.files);
+    if (isXhr(req)) return res.status(500).json({ ok: false, error: req.t('upload_server_error') });
+    return next(e);
+  }
 });
 
 router.post('/:mid/delete', canWrite, async (req, res) => {

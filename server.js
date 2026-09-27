@@ -140,6 +140,9 @@ async function main() {
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
     console.error('[error]', err);
+    const wantsJson = req.get('x-requested-with') === 'XMLHttpRequest' ||
+      String(req.get('accept') || '').includes('application/json');
+    if (wantsJson) return res.status(500).json({ ok: false, error: req.t ? req.t('upload_server_error') : 'Error' });
     res.status(500).render('view-layout', { page: 'view-error', title: 'Error', message: req.t ? req.t('error_generic') : 'Error' });
   });
 

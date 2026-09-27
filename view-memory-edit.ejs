@@ -1,13 +1,13 @@
 <%- include('view-inc-familytabs', { tab: 'memories' }) %>
 <h1><%= t('edit_memory') %></h1>
 <div class="card">
-<form method="post" action="/families/<%= family.id %>/memories/<%= memory.id %>" enctype="multipart/form-data">
+<form id="memory-form" method="post" action="/families/<%= family.id %>/memories/<%= memory.id %>" enctype="multipart/form-data">
   <label><%= t('memory_title') %> *<input name="title" required maxlength="200" value="<%= memory.title %>"></label>
   <div class="two">
     <label><%= t('photo_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="photo" accept="image/*"></label>
     <label><%= t('audio_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="audio" accept="audio/*"></label>
   </div>
-  <label><%= t('video_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="video" accept="video/*">
+  <label><%= t('video_label') %> <span class="muted">(<%= t('optional') %> · <%= t('video_max_hint') %>)</span><input type="file" name="video" accept="video/*">
     <% if (memory.video_path) { %><span class="muted small">Actual: <a href="<%= memory.video_path %>" target="_blank"><%= t('view') %></a></span><% } %></label>
   <label><%= t('transcription_label') %><textarea name="transcription" rows="3"><%= memory.transcription %></textarea></label>
   <label><%= t('story_label') %><textarea id="story" name="story" rows="6"><%= memory.story %></textarea></label>
@@ -48,5 +48,6 @@
   <% } %>
   <p><button class="btn" type="submit"><%= t('save') %></button>
   <a class="btn ghost" href="/families/<%= family.id %>/memories/<%= memory.id %>"><%= t('cancel') %></a></p>
+  <%- include('view-inc-uploadprogress') %>
 </form>
 </div>

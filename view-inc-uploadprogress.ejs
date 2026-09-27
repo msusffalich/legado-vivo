@@ -1,0 +1,62 @@
+<div id="upload-progress" class="upload-progress" hidden>
+  <div class="upload-bar"><div id="upload-bar-fill"></div></div>
+  <p id="upload-status" class="muted small"></p>
+</div>
+<p id="upload-error" class="upload-error" hidden></p>
+<script>
+(function () {
+  var form = document.getElementById('memory-form');
+  if (!form) return;
+  var T = <%- JSON.stringify({
+    uploading: t('uploading'),
+    done: t('upload_done'),
+    serverError: t('upload_server_error'),
+    connError: t('upload_connection_error')
+  }) %>;
+  var progress = document.getElementById('upload-progress');
+  var fill = document.getElementById('upload-bar-fill');
+  var status = document.getElementById('upload-status');
+  var errBox = document.getElementById('upload-error');
+  var submitBtn = form.querySelector('button[type="submit"]');
+  function fmtMB(n) { return (n / 1048576).toFixed(1) + ' MB'; }
+  function showError(msg) {
+    errBox.textContent = msg;
+    errBox.hidden = false;
+    if (submitBtn) submitBtn.disabled = false;
+  }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    errBox.hidden = true;
+    progress.hidden = false;
+    fill.style.width = '0%';
+    status.textContent = T.uploading;
+    if (submitBtn) submitBtn.disabled = true;
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', form.action);
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.upload.addEventListener('progress', function (ev) {
+      if (ev.lengthComputable) {
+        var pct = Math.round(ev.loaded / ev.total * 100);
+        fill.style.width = pct + '%';
+        status.textContent = T.uploading + ' ' + pct + '% · ' + fmtMB(ev.loaded) + ' / ' + fmtMB(ev.total);
+      } else {
+        status.textContent = T.uploading;
+      }
+    });
+    xhr.addEventListener('load', function () {
+      var data = null;
+      try { data = JSON.parse(xhr.responseText); } catch (e2) { /* noop */ }
+      if (xhr.status >= 200 && xhr.status < 300 && data && data.ok) {
+        status.textContent = T.done;
+        window.location.href = data.redirect;
+      } else {
+        showError((data && data.error) || T.serverError);
+      }
+    });
+    xhr.addEventListener('error', function () { showError(T.connError); });
+    xhr.addEventListener('abort', function () { showError(T.connError); });
+    xhr.send(new FormData(form));
+  });
+})();
+</script>
