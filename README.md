@@ -257,3 +257,9 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   did not authorize `video_path` (only photo/audio) and returned 404: videos would not
   play. Fixed. The library now also shows a first-frame thumbnail for video-only memories
   (with a ▶ badge).*
+- 2026-09-27 (miniaturas en todas las vistas): la página de la familia, la cronología y la
+  búsqueda tenían su propia cuadrícula de recuerdos sin miniatura de video; ahora muestran
+  la misma miniatura (primer cuadro + insignia ▶) que la biblioteca. / *2026-09-27
+  (thumbnails in all views): the family page, timeline and search had their own memory
+  grids without video thumbnails; they now show the same thumbnail (first frame + ▶ badge)
+  as the library.*
