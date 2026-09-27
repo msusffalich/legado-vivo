@@ -95,7 +95,7 @@ async function main() {
     if (!name) return res.status(404).send('No encontrado');
     const rel = '/uploads/' + name;
     const { rows } = await db.query(
-      'SELECT family_id FROM memories WHERE photo_path=$1 OR audio_path=$1 LIMIT 1', [rel]);
+      'SELECT family_id FROM memories WHERE photo_path=$1 OR audio_path=$1 OR video_path=$1 LIMIT 1', [rel]);
     if (!rows.length) return res.status(404).send('No encontrado');
     const { rows: ok } = await db.query(
       'SELECT 1 FROM memberships WHERE family_id=$1 AND user_id=$2',

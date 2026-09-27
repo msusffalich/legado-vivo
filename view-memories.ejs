@@ -11,7 +11,8 @@
 <div class="grid">
 <% memories.forEach(function(m) { %>
   <a class="card memcard" href="/families/<%= family.id %>/memories/<%= m.id %>">
-    <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% } %>
+    <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% }
+       else if (m.video_path) { %><span class="memthumb"><video src="<%= m.video_path %>" preload="metadata" muted playsinline></video><span class="playbadge">▶</span></span><% } %>
     <h4><%= m.title %></h4>
     <p class="muted small"><%= fmtMemDate(m) %><% if (m.status === 'pending') { %> · ⏳ <%= t('status_pending') %><% } %></p>
   </a>

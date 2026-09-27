@@ -244,3 +244,10 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   connection dropped). **Video limit raised to 200 MB** (photo/audio: 100 MB).
   All image and video formats enabled: accepted by MIME type or extension
   (jpg, png, heic/heif, webp, avif, raw; mp4, mov, avi, mkv, webm, 3gp, mts, etc.).*
+- 2026-09-27 (videos en biblioteca): la ruta `/uploads/:name` no autorizaba `video_path`
+  (solo foto/audio) y devolvía 404: los videos no se reproducían. Corregido. Además la
+  biblioteca ahora muestra miniatura del primer cuadro para recuerdos con video y sin
+  foto (con insignia ▶). / *2026-09-27 (videos in library): the `/uploads/:name` route
+  did not authorize `video_path` (only photo/audio) and returned 404: videos would not
+  play. Fixed. The library now also shows a first-frame thumbnail for video-only memories
+  (with a ▶ badge).*
