@@ -1,7 +1,6 @@
 'use strict';
 require('dotenv').config();
 const express = require('express');
-const helmet = require('helmet');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
@@ -29,11 +28,8 @@ async function main() {
 
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   app.use(express.json({ limit: '30mb' }));
-  // Cabeceras seguras. CSP queda desactivada por ahora porque algunas vistas
-  // heredadas todavía usan manejadores inline (onclick/onchange).
-  app.use(helmet({ contentSecurityPolicy: false }));
 
-   app.use(session({
+  app.use(session({
     store: new pgSession({ pool: db.pool, tableName: 'session', createTableIfMissing: false }),
     secret: process.env.SESSION_SECRET || 'dev-secret-cambialo',
     resave: false,
@@ -110,15 +106,7 @@ async function main() {
     });
   });
 
-  app.get('/healthz', async (req, res) => {
-    try {
-      await db.query('SELECT 1');
-      res.json({ ok: true, database: 'ok', time: new Date().toISOString() });
-    } catch (err) {
-      console.error('[healthz] base de datos no disponible:', err.message);
-      res.status(503).json({ ok: false, database: 'unavailable', time: new Date().toISOString() });
-    }
-  });
+  app.get('/healthz', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
   // Portada
   app.get('/', (req, res) => {

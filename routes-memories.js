@@ -10,41 +10,26 @@ const router = express.Router({ mergeParams: true });
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
 
-const MIME_EXTENSIONS = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-  'image/gif': '.gif',
-  'image/heic': '.heic',
-  'image/heif': '.heif',
-  'audio/mpeg': '.mp3',
-  'audio/mp4': '.m4a',
-  'audio/x-m4a': '.m4a',
-  'audio/wav': '.wav',
-  'audio/x-wav': '.wav',
-  'audio/ogg': '.ogg',
-  'audio/webm': '.webm',
-  'audio/aac': '.aac',
-  'audio/flac': '.flac',
-};
-
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
-    // La extensión se deriva del MIME aprobado, no del nombre controlado por el usuario.
-    const ext = MIME_EXTENSIONS[file.mimetype] || '.bin';
+    const ext = path.extname(file.originalname || '').toLowerCase() || '.bin';
     cb(null, Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext);
   },
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const ok = Boolean(MIME_EXTENSIONS[file.mimetype]);
+    const ok = /^(image|audio|video)\//.test(file.mimetype);
     cb(ok ? null : new Error('badtype'), ok);
   },
 });
-const fields = upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'audio', maxCount: 1 }]);
+const fields = upload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'audio', maxCount: 1 },
+  { name: 'video', maxCount: 1 },
+]);
 
 async function peopleNames(familyId, memoryId) {
   const { rows } = await db.query(
@@ -63,17 +48,6 @@ function personIds(body) {
   let ids = body.person_ids || [];
   if (!Array.isArray(ids)) ids = [ids];
   return ids.map((x) => parseInt(x, 10)).filter(Boolean);
-}
-
-async function linkPeople(memoryId, familyId, ids) {
-  for (const pid of ids) {
-    await db.query(
-      `INSERT INTO memory_people (memory_id, person_id)
-       SELECT $1, id FROM persons WHERE id=$2 AND family_id=$3
-       ON CONFLICT DO NOTHING`,
-      [memoryId, pid, familyId]
-    );
-  }
 }
 
 // ---- Lista ----
@@ -115,33 +89,22 @@ router.post('/', canWrite, (req, res, next) => {
   }
   const photo = req.files && req.files.photo ? '/uploads/' + req.files.photo[0].filename : null;
   const audio = req.files && req.files.audio ? '/uploads/' + req.files.audio[0].filename : null;
+  const video = req.files && req.files.video ? '/uploads/' + req.files.video[0].filename : null;
   const memoryDate = (b.memory_date || '').trim() || null;
   const { rows } = await db.query(
     `INSERT INTO memories (family_id, title, story, transcription, place, memory_date, date_precision,
-      photo_path, audio_path, interview, status, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'complete',$11) RETURNING id`,
+      photo_path, audio_path, video_path, interview, status, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'complete',$12) RETURNING id`,
     [req.family.id, title, b.story || '', b.transcription || '', (b.place || '').trim(), memoryDate,
      ['exact', 'approx'].includes(b.date_precision) ? b.date_precision : 'unknown',
-     photo, audio, JSON.stringify(interview), req.session.user.id]
+     photo, audio, video, JSON.stringify(interview), req.session.user.id]
   );
   const mid = rows[0].id;
-  await linkPeople(mid, req.family.id, personIds(b));
+  for (const pid of personIds(b)) {
+    await db.query('INSERT INTO memory_people (memory_id, person_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [mid, pid]);
+  }
   req.session.flash = req.t('memory_created');
   res.redirect(`/families/${req.family.id}/memories/${mid}`);
-});
-
-// ---- Cronología ----
-// Debe declararse antes de /:mid para que "timeline" no sea interpretado como un ID.
-router.get('/timeline/view', async (req, res) => {
-  const { rows } = await db.query(
-    `SELECT * FROM memories WHERE family_id=$1 ORDER BY memory_date NULLS LAST, created_at`,
-    [req.family.id]
-  );
-  await withPeople(rows);
-  res.render('view-layout', {
-    page: 'view-timeline', title: req.t('timeline_title'),
-    family: req.family, membership: req.membership, memories: rows,
-  });
 });
 
 // ---- Ver ----
@@ -197,16 +160,19 @@ router.post('/:mid', canWrite, (req, res, next) => {
   }
   const photo = req.files && req.files.photo ? '/uploads/' + req.files.photo[0].filename : old.photo_path;
   const audio = req.files && req.files.audio ? '/uploads/' + req.files.audio[0].filename : old.audio_path;
+  const video = req.files && req.files.video ? '/uploads/' + req.files.video[0].filename : old.video_path;
   const title = (b.title || '').trim() || old.title;
   await db.query(
     `UPDATE memories SET title=$1, story=$2, transcription=$3, place=$4, memory_date=$5, date_precision=$6,
-      photo_path=$7, audio_path=$8, interview=$9, status=$10, updated_at=now() WHERE id=$11`,
+      photo_path=$7, audio_path=$8, video_path=$9, interview=$10, status=$11, updated_at=now() WHERE id=$12`,
     [title, b.story || '', b.transcription || '', (b.place || '').trim(), (b.memory_date || '').trim() || null,
      ['exact', 'approx', 'unknown'].includes(b.date_precision) ? b.date_precision : 'unknown',
-     photo, audio, JSON.stringify(interview), b.status === 'pending' ? 'pending' : 'complete', mid]
+     photo, audio, video, JSON.stringify(interview), b.status === 'pending' ? 'pending' : 'complete', mid]
   );
   await db.query('DELETE FROM memory_people WHERE memory_id=$1', [mid]);
-  await linkPeople(mid, req.family.id, personIds(b));
+  for (const pid of personIds(b)) {
+    await db.query('INSERT INTO memory_people (memory_id, person_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [mid, pid]);
+  }
   req.session.flash = req.t('memory_updated');
   res.redirect(`/families/${req.family.id}/memories/${mid}`);
 });
@@ -216,6 +182,19 @@ router.post('/:mid/delete', canWrite, async (req, res) => {
   const r = await db.query('DELETE FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
   req.session.flash = req.t(r.rowCount ? 'memory_deleted' : 'not_found');
   res.redirect(`/families/${req.family.id}/memories`);
+});
+
+// ---- Cronología ----
+router.get('/timeline/view', async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT * FROM memories WHERE family_id=$1 ORDER BY memory_date NULLS LAST, created_at`,
+    [req.family.id]
+  );
+  await withPeople(rows);
+  res.render('view-layout', {
+    page: 'view-timeline', title: req.t('timeline_title'),
+    family: req.family, membership: req.membership, memories: rows,
+  });
 });
 
 module.exports = router;

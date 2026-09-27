@@ -19,6 +19,9 @@
   <p class="muted small"><%= fmtMemDate(memory) %><% if (memory.place) { %> · <%= memory.place %><% } %>
     <% if (author) { %> · <%= t('memory_by', { name: author }) %><% } %></p>
   <% if (memory.photo_path) { %><img class="bigimg" src="<%= memory.photo_path %>" alt=""><% } %>
+  <% if (memory.video_path) { %>
+    <h4><%= t('video_label') %></h4>
+    <video controls preload="metadata" src="<%= memory.video_path %>" style="max-width:100%;border-radius:8px"></video><% } %>
   <% if (memory.story) { %><p class="story"><%= memory.story %></p><% } %>
   <% if (memory.transcription) { %>
     <h4><%= t('transcription_label') %></h4><p class="story muted"><%= memory.transcription %></p><% } %>

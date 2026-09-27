@@ -31,17 +31,9 @@ function checkKey(req, res, next) {
   next();
 }
 
-const ALLOWED_EXTENSIONS = {
-  photo: new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif']),
-  audio: new Set(['.mp3', '.m4a', '.wav', '.ogg', '.webm', '.aac', '.flac']),
-};
-
-function saveBase64(b64, filename, kind) {
+function saveBase64(b64, filename) {
   if (!b64) return null;
-  const fallback = kind === 'photo' ? 'photo.jpg' : 'audio.ogg';
-  const safe = (filename || fallback).replace(/[^a-zA-Z0-9.\-_]/g, '_');
-  const ext = path.extname(safe).toLowerCase();
-  if (!ALLOWED_EXTENSIONS[kind].has(ext)) return null;
+  const safe = (filename || 'file.bin').replace(/[^a-zA-Z0-9.\-_]/g, '_');
   const name = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-' + safe;
   const buf = Buffer.from(String(b64).split(',').pop(), 'base64');
   if (!buf.length || buf.length > 25 * 1024 * 1024) return null;
@@ -62,8 +54,8 @@ router.post('/drafts', checkKey, async (req, res) => {
   const { rows: dup } = await db.query('SELECT id FROM memories WHERE bridge_draft_id=$1', [draftId]);
   if (dup.length) return res.json({ ok: true, memoryId: dup[0].id, duplicate: true });
 
-  const photo = saveBase64(b.photoBase64, b.photoFilename || 'photo.jpg', 'photo');
-  const audio = saveBase64(b.audioBase64, b.audioFilename || 'audio.ogg', 'audio');
+  const photo = saveBase64(b.photoBase64, b.photoFilename || 'photo.jpg');
+  const audio = saveBase64(b.audioBase64, b.audioFilename || 'audio.ogg');
   const story = b.text || b.story || '';
   const title = (b.title || '').trim() || story.split('\n')[0].slice(0, 80) || 'Recuerdo del asistente';
 
