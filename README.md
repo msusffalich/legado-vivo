@@ -20,6 +20,9 @@ Legado Vivo es el archivo privado de tu familia:
 - **Familias y roles**: crea varias familias; cada una con administrador, colaboradores y lectores.
 - **Recuerdos**: foto, video (máx. 200 MB) y/o audio (máx. 100 MB), relato, transcripción, personas, lugar, fecha (exacta o aproximada)
   y entrevista guiada. La subida muestra barra de progreso y avisa el motivo si falla. Estados: completo o *pendiente de completar*.
+  Formatos aceptados: imágenes (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
+  y audios (mp3, wav, m4a, aac, ogg, flac…). En la biblioteca, los recuerdos con video muestran una miniatura
+  (primer cuadro) con insignia ▶; el video se reproduce en la página del recuerdo.
 - **Cronología**: ordenada por la fecha del recuerdo, no por la fecha de subida.
 - **Historias**: genera texto con IA (OpenAI, opcional) citando sus fuentes, o escríbelas manualmente.
 - **Taller**: selecciona recuerdos y genera álbumes PDF por tema (cumpleaños, Navidad, viajes…).
@@ -112,6 +115,9 @@ Legado Vivo is your family's private archive:
 - **Families & roles**: create several families; each with admin, collaborators and readers.
 - **Memories**: photo, video (max 200 MB) and/or audio (max 100 MB), story, transcription, people, place, date (exact or
   approximate) and a guided interview. Upload shows a progress bar and reports the reason if it fails. Status: complete or *pending completion*.
+  Accepted formats: images (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
+  and audios (mp3, wav, m4a, aac, ogg, flac…). In the library, video memories show a thumbnail
+  (first frame) with a ▶ badge; the video plays on the memory page.
 - **Timeline**: ordered by the memory's date, not the upload date.
 - **Stories**: AI-generate text (OpenAI, optional) with cited sources, or write manually.
 - **Workshop**: pick memories and build themed PDF albums (birthdays, Christmas, trips…).
