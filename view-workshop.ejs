@@ -9,7 +9,7 @@
 <% albums.forEach(function(a) { %>
   <a class="card" href="/families/<%= family.id %>/workshop/<%= a.id %>">
     <h3>📖 <%= a.title %></h3>
-    <p class="muted small"><%= t('album_contains', { n: a.count }) %> · <%= t('created_on', { date: fmtDate(a.created_at) }) %></p>
+    <p class="muted small"><%= a.count === 1 ? t('one_memory') : t('memories_count', { n: a.count }) %> · <%= t('created_on', { date: fmtDate(a.created_at) }) %></p>
   </a>
 <% }); %>
 </div>

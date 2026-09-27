@@ -35,11 +35,19 @@ function generateAlbumPDF({ family, album, memories, lang }) {
     doc.fontSize(30).fillColor('#2b2118').text(album.title, { align: 'center' });
     doc.moveDown(1);
     doc.fontSize(12).fillColor('#6b5b4c').text(
-      `${memories.length} ${lang === 'en' ? 'memories' : 'recuerdos'} · ${new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'es-ES')}`,
+      `${memories.length === 1 ? t(lang, 'one_memory') : t(lang, 'memories_count', { n: memories.length })} · ${new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'es-ES')}`,
       { align: 'center' }
     );
     doc.moveDown(2);
     doc.fontSize(11).fillColor('#8a7a68').text(t(lang, 'app_tagline'), { align: 'center' });
+
+    // Narrativa del álbum (historia/introducción escrita por el usuario)
+    if (album.narrative && String(album.narrative).trim()) {
+      doc.addPage();
+      doc.fontSize(20).fillColor('#2b2118').text(t(lang, 'album_narrative_title'));
+      doc.moveDown(0.8);
+      doc.fontSize(12).fillColor('#2b2118').text(String(album.narrative).trim(), { align: 'justify' });
+    }
 
     for (const m of memories) {
       doc.addPage();

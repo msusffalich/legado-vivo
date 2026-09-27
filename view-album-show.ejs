@@ -12,11 +12,13 @@
     <a class="btn ghost small" href="/families/<%= family.id %>/workshop"><%= t('back') %></a>
   </p>
 </div>
-<p class="muted"><%= t('album_contains', { n: memories.length }) %></p>
+<p class="muted"><%= memories.length === 1 ? t('one_memory') : t('memories_count', { n: memories.length }) %></p>
+<% if (album.narrative) { %><div class="card"><p style="white-space:pre-wrap"><%= album.narrative %></p></div><% } %>
 <div class="grid">
 <% memories.forEach(function(m) { %>
   <a class="card memcard" href="/families/<%= family.id %>/memories/<%= m.id %>">
-    <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% } %>
+    <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% }
+       else if (m.video_path) { %><span class="memthumb"><video src="<%= m.video_path %>" preload="metadata" muted playsinline></video><span class="playbadge">▶</span></span><% } %>
     <h4><%= m.title %></h4>
     <p class="muted small"><%= fmtMemDate(m) %></p>
   </a>

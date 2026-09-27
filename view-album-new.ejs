@@ -1,15 +1,175 @@
 <%- include('view-inc-familytabs', { tab: 'workshop' }) %>
 <h1><%= t('new_album') %></h1>
 <div class="card">
-<form method="post" action="/families/<%= family.id %>/workshop">
+<form method="post" action="/families/<%= family.id %>/workshop" id="albumForm">
   <label><%= t('album_title') %> *<input name="title" required maxlength="200" placeholder="<%= t('album_hint') %>"></label>
+  <label><%= t('album_narrative') %> <span class="muted small">(<%= t('optional') %>)</span>
+    <textarea name="narrative" rows="4" maxlength="5000" placeholder="<%= t('album_narrative_hint') %>"></textarea>
+  </label>
+
   <h3><%= t('select_memories_album') %></h3>
-  <div class="checks">
-  <% memories.forEach(function(m) { %>
-    <label class="check"><input type="checkbox" name="memory_ids" value="<%= m.id %>"> <strong><%= m.title %></strong> <span class="muted small"><%= fmtMemDate(m) %></span></label>
+  <div class="filterbar" id="filterbar">
+    <div class="frow">
+      <label><%= t('filter_from') %> <input type="date" id="fFrom"></label>
+      <label><%= t('filter_to') %> <input type="date" id="fTo"></label>
+      <label class="fgrow"><%= t('filter_keyword') %>
+        <input type="search" id="fKw" placeholder="<%= t('filter_keyword_ph') %>" autocomplete="off">
+      </label>
+    </div>
+    <% if (persons.length) { %>
+    <div class="frow">
+      <span class="flabel"><%= t('filter_people') %>:</span>
+      <div class="chips" id="fPeople">
+        <% persons.forEach(function(p) { %>
+          <button type="button" class="chip" data-id="<%= p.id %>" aria-pressed="false"><%= p.name %></button>
+        <% }); %>
+      </div>
+    </div>
+    <% } %>
+    <div class="frow">
+      <button type="button" class="btn small ghost" id="btnClear"><%= t('clear_filters') %></button>
+      <button type="button" class="btn small ghost" id="btnSelectVisible"><%= t('select_visible') %></button>
+      <button type="button" class="btn small ghost" id="btnSortDate"><%= t('order_by_date') %></button>
+      <span class="muted small" id="countLabel" data-pattern="<%= t('showing_count') %>"></span>
+    </div>
+  </div>
+
+  <p class="muted small"><%= t('reorder_hint') %></p>
+  <div class="picks" id="pickList">
+  <% memories.forEach(function(m, i) {
+       const searchText = ((m.title || '') + ' ' + (m.story || '') + ' ' + (m.place || '') + ' ' + (m.people_names || '')).replace(/\s+/g, ' ').toLowerCase();
+  %>
+    <div class="pick" draggable="false"
+         data-id="<%= m.id %>"
+         data-date="<%= memDateISO(m) %>"
+         data-people="<%= (m.people_ids || []).join(',') %>"
+         data-text="<%= searchText %>">
+      <span class="drag-handle" title="<%= t('reorder_hint_short') %>" draggable="true">⋮⋮</span>
+      <span class="pick-num"><%= i + 1 %></span>
+      <span class="pickthumb">
+        <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% }
+           else if (m.video_path) { %><span class="vthumb">▶</span><% }
+           else { %><span class="vthumb none">—</span><% } %>
+      </span>
+      <label class="picklabel">
+        <input type="checkbox" name="memory_ids" value="<%= m.id %>">
+        <span><strong><%= m.title %></strong><br>
+        <span class="muted small"><%= fmtMemDate(m) %><% if (m.people_names) { %> · <%= m.people_names %><% } %></span></span>
+      </label>
+      <span class="pickmove">
+        <button type="button" class="btn tiny ghost" data-move="-1" title="<%= t('move_up') %>">↑</button>
+        <button type="button" class="btn tiny ghost" data-move="1" title="<%= t('move_down') %>">↓</button>
+      </span>
+    </div>
   <% }); %>
   </div>
+  <% if (!memories.length) { %><p class="muted"><%= t('no_memories') %></p><% } %>
   <p><button class="btn" type="submit"><%= t('create_album') %></button>
   <a class="btn ghost" href="/families/<%= family.id %>/workshop"><%= t('cancel') %></a></p>
 </form>
 </div>
+<script>
+(function () {
+  var list = document.getElementById('pickList');
+  if (!list) return;
+  var items = Array.prototype.slice.call(list.querySelectorAll('.pick'));
+  var fFrom = document.getElementById('fFrom'), fTo = document.getElementById('fTo'),
+      fKw = document.getElementById('fKw'), fPeople = document.getElementById('fPeople'),
+      countLabel = document.getElementById('countLabel');
+
+  function selectedPeople() {
+    if (!fPeople) return [];
+    return Array.prototype.map.call(fPeople.querySelectorAll('.chip[aria-pressed="true"]'),
+      function (c) { return c.getAttribute('data-id'); });
+  }
+  function applyFilters() {
+    var from = fFrom.value, to = fTo.value, kw = fKw.value.trim().toLowerCase(), ppl = selectedPeople();
+    var shown = 0;
+    items.forEach(function (it) {
+      var d = it.getAttribute('data-date'), ok = true;
+      if (from && (!d || d < from)) ok = false;
+      if (to && (!d || d > to)) ok = false;
+      if (ok && ppl.length) {
+        var mp = (it.getAttribute('data-people') || '').split(',').filter(Boolean);
+        ok = ppl.some(function (id) { return mp.indexOf(id) !== -1; });
+      }
+      if (ok && kw && it.getAttribute('data-text').indexOf(kw) === -1) ok = false;
+      it.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
+    countLabel.textContent = countLabel.getAttribute('data-pattern')
+      .replace('{shown}', shown).replace('{total}', items.length);
+  }
+  ['input', 'change'].forEach(function (ev) {
+    fFrom.addEventListener(ev, applyFilters);
+    fTo.addEventListener(ev, applyFilters);
+    fKw.addEventListener(ev, applyFilters);
+  });
+  if (fPeople) fPeople.addEventListener('click', function (e) {
+    var chip = e.target.closest('.chip'); if (!chip) return;
+    chip.setAttribute('aria-pressed', chip.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    applyFilters();
+  });
+  document.getElementById('btnClear').addEventListener('click', function () {
+    fFrom.value = ''; fTo.value = ''; fKw.value = '';
+    if (fPeople) fPeople.querySelectorAll('.chip').forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
+    applyFilters();
+  });
+  document.getElementById('btnSelectVisible').addEventListener('click', function () {
+    items.forEach(function (it) {
+      if (it.style.display !== 'none') it.querySelector('input[type=checkbox]').checked = true;
+    });
+  });
+
+  function renumber() {
+    var n = 0;
+    Array.prototype.forEach.call(list.querySelectorAll('.pick'), function (it) {
+      n++;
+      it.querySelector('.pick-num').textContent = n;
+    });
+  }
+  // Arrastrar desde el asa ⋮⋮
+  var dragEl = null;
+  list.addEventListener('dragstart', function (e) {
+    var h = e.target.closest('.drag-handle'); if (!h) { e.preventDefault(); return; }
+    dragEl = h.closest('.pick');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', dragEl.getAttribute('data-id')); } catch (err) {}
+    dragEl.classList.add('dragging');
+  });
+  list.addEventListener('dragend', function () {
+    if (dragEl) dragEl.classList.remove('dragging');
+    dragEl = null; renumber();
+  });
+  list.addEventListener('dragover', function (e) {
+    if (!dragEl) return;
+    e.preventDefault();
+    var after = null;
+    var els = list.querySelectorAll('.pick:not(.dragging)');
+    for (var i = 0; i < els.length; i++) {
+      var r = els[i].getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) { after = els[i]; break; }
+    }
+    if (after) list.insertBefore(dragEl, after); else list.appendChild(dragEl);
+  });
+  // Botones ↑ ↓ (funcionan también en táctil)
+  list.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-move]'); if (!b) return;
+    var it = b.closest('.pick'), dir = parseInt(b.getAttribute('data-move'), 10);
+    if (dir < 0 && it.previousElementSibling) list.insertBefore(it, it.previousElementSibling);
+    if (dir > 0 && it.nextElementSibling) list.insertBefore(it.nextElementSibling, it);
+    renumber();
+  });
+  document.getElementById('btnSortDate').addEventListener('click', function () {
+    var arr = Array.prototype.slice.call(list.querySelectorAll('.pick'));
+    arr.sort(function (a, b) {
+      var da = a.getAttribute('data-date'), db = b.getAttribute('data-date');
+      if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+      return da < db ? -1 : (da > db ? 1 : 0);
+    });
+    arr.forEach(function (it) { list.appendChild(it); });
+    renumber();
+  });
+  applyFilters();
+})();
+</script>

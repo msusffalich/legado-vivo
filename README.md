@@ -25,9 +25,13 @@ Legado Vivo es el archivo privado de tu familia:
   (primer cuadro) con insignia ▶; el video se reproduce en la página del recuerdo.
 - **Cronología**: ordenada por la fecha del recuerdo, no por la fecha de subida.
 - **Historias**: genera texto con IA (OpenAI, opcional) citando sus fuentes, o escríbelas manualmente.
-- **Taller**: selecciona recuerdos y genera álbumes PDF por tema (cumpleaños, Navidad, viajes…).
+- **Taller**: arma álbumes PDF por tema (cumpleaños, Navidad, viajes…).
   Cada álbum es una *edición*: cuando agregues recuerdos, crea una nueva edición.
-  Los recuerdos con video aparecen con una imagen de su primer cuadro.
+  El armador tiene filtros combinables (fechas, personas, tema/palabra clave), miniaturas
+  de foto y video en la lista, y orden manual: arrastra con ⋮⋮ o usa ↑ ↓ — ese orden es el
+  que sale en el PDF. También puedes escribir la *historia o narrativa del álbum*, que
+  aparece después de la portada. Los recuerdos con video aparecen con una imagen de su
+  primer cuadro.
 - **Búsqueda**: por palabras clave, o conversacional con IA si hay clave configurada.
 - **Asistente por WhatsApp**: manda foto + relato al número del asistente y el borrador entra
   al archivo como *pendiente de completar*.
@@ -121,9 +125,13 @@ Legado Vivo is your family's private archive:
   (first frame) with a ▶ badge; the video plays on the memory page.
 - **Timeline**: ordered by the memory's date, not the upload date.
 - **Stories**: AI-generate text (OpenAI, optional) with cited sources, or write manually.
-- **Workshop**: pick memories and build themed PDF albums (birthdays, Christmas, trips…).
+- **Workshop**: build themed PDF albums (birthdays, Christmas, trips…).
   Each album is an *edition*: when you add memories, create a new edition.
-  Video memories appear with a still image of their first frame.
+  The builder has combinable filters (dates, people, theme/keyword), photo and video
+  thumbnails in the list, and manual ordering: drag with ⋮⋮ or use ↑ ↓ — that order is
+  the one used in the PDF. You can also write the *album's story or narrative*, which
+  appears after the cover page. Video memories appear with a still image of their
+  first frame.
 - **Search**: keyword search, or conversational AI search when a key is set.
 - **WhatsApp assistant**: send a photo + story to the assistant's number and the draft
   enters the archive as *pending completion*.
@@ -278,3 +286,21 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   generated, a placeholder box with a play symbol is drawn instead. Also fixed album
   text overlapping photos (pdfkit does not advance the cursor after `image()`).
   Requires the `ffmpeg-static` dependency.*
+- 2026-09-27 (álbumes: miniaturas, filtros, orden manual y narrativa): la página del álbum
+  no mostraba miniatura para recuerdos con video; ahora sí (primer cuadro + insignia ▶).
+  El armador de álbumes ahora tiene: filtros combinables por fecha (desde/hasta), personas
+  y tema o palabra clave; miniaturas de foto y video en la lista; orden manual — arrastra
+  con ⋮⋮ o usa ↑ ↓ y ese orden se respeta al guardar y en el PDF (ya no se reordena por
+  fecha automáticamente). Además se agregó la *historia o narrativa del álbum*
+  (columna `narrative`, migración `migration-003.sql`), que aparece tras la portada del
+  PDF y en la página del álbum. Gramática: "1 recuerdo" en singular en vez de
+  "1 recuerdos". Los relatos individuales se siguen editando en cada recuerdo
+  (campo Relato). / *2026-09-27 (albums: thumbnails, filters, manual order and
+  narrative): the album page did not show thumbnails for video memories; it now does
+  (first frame + ▶ badge). The album builder now has: combinable filters by date
+  (from/to), people and theme or keyword; photo and video thumbnails in the list;
+  manual ordering — drag with ⋮⋮ or use ↑ ↓ and that order is kept on save and in the
+  PDF (no longer auto-sorted by date). Also added the *album story or narrative*
+  (`narrative` column, `migration-003.sql` migration), shown after the PDF cover page
+  and on the album page. Grammar: singular "1 memory" instead of "1 memories".
+  Individual stories are still edited inside each memory (Story field).*

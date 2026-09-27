@@ -32,9 +32,21 @@ router.get('/new', canWrite, async (req, res) => {
   const { rows } = await db.query(
     "SELECT * FROM memories WHERE family_id=$1 AND status='complete' ORDER BY memory_date NULLS LAST, created_at",
     [req.family.id]);
+  const { rows: pers } = await db.query('SELECT id, name FROM persons WHERE family_id=$1 ORDER BY name', [req.family.id]);
+  const persById = new Map(pers.map((p) => [p.id, p.name]));
+  const { rows: mp } = await db.query(
+    'SELECT mp.memory_id, mp.person_id FROM memory_people mp JOIN memories m ON m.id=mp.memory_id WHERE m.family_id=$1',
+    [req.family.id]);
+  const byMem = {};
+  for (const r of mp) { (byMem[r.memory_id] = byMem[r.memory_id] || []).push(r.person_id); }
+  for (const m of rows) {
+    const pids = byMem[m.id] || [];
+    m.people_ids = pids;
+    m.people_names = pids.map((id) => persById.get(id)).filter(Boolean).join(', ');
+  }
   res.render('view-layout', {
     page: 'view-album-new', title: req.t('new_album'),
-    family: req.family, membership: req.membership, memories: rows,
+    family: req.family, membership: req.membership, memories: rows, persons: pers,
   });
 });
 
@@ -43,14 +55,17 @@ router.post('/', canWrite, async (req, res) => {
   if (!Array.isArray(ids)) ids = [ids];
   ids = ids.map((x) => parseInt(x, 10)).filter(Boolean);
   const title = (req.body.title || '').trim() || (req.lang === 'en' ? 'Untitled album' : 'Álbum sin título');
+  const narrative = (req.body.narrative || '').trim();
   if (!ids.length) return res.redirect(`/families/${req.family.id}/workshop/new`);
-  // Orden cronológico según la fecha del recuerdo
-  const { rows } = await db.query('SELECT id, memory_date FROM memories WHERE family_id=$1 AND id = ANY($2)', [req.family.id, ids]);
-  const order = new Map(rows.map((r) => [r.id, r.memory_date || '9999']));
-  ids.sort((a, b) => String(order.get(a)).localeCompare(String(order.get(b))));
+  // Se valida que los recuerdos pertenezcan a la familia, pero se respeta el orden
+  // elegido por el usuario en la lista (puede arrastrar para ordenar).
+  const { rows } = await db.query('SELECT id FROM memories WHERE family_id=$1 AND id = ANY($2)', [req.family.id, ids]);
+  const okIds = new Set(rows.map((r) => r.id));
+  ids = ids.filter((id) => okIds.has(id));
+  if (!ids.length) return res.redirect(`/families/${req.family.id}/workshop/new`);
   const { rows: ins } = await db.query(
-    'INSERT INTO albums (family_id, title, memory_ids, created_by) VALUES ($1,$2,$3,$4) RETURNING id',
-    [req.family.id, title, JSON.stringify(ids), req.session.user.id]
+    'INSERT INTO albums (family_id, title, narrative, memory_ids, created_by) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+    [req.family.id, title, narrative, JSON.stringify(ids), req.session.user.id]
   );
   req.session.flash = req.t('album_created');
   res.redirect(`/families/${req.family.id}/workshop/${ins[0].id}`);

@@ -84,3 +84,26 @@ audio { width: 100%; }
 .memthumb { position: relative; display: block; aspect-ratio: 16/10; background: #111; border-radius: 8px; overflow: hidden; }
 .memthumb video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 .playbadge { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 2rem; text-shadow: 0 1px 8px rgba(0,0,0,.7); pointer-events: none; }
+
+/* Armador de álbumes: filtros, lista ordenable y miniaturas */
+.filterbar { background: #faf7f2; border: 1px solid var(--line); border-radius: 10px; padding: .7rem .8rem; margin: .6rem 0; display: grid; gap: .55rem; }
+.frow { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.frow label { display: grid; gap: .15rem; font-size: .9rem; }
+.frow label.fgrow { flex: 1 1 200px; }
+.flabel { font-size: .9rem; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: .3rem .75rem; font-size: .88rem; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.picks { display: grid; gap: .4rem; margin: .6rem 0; }
+.pick { display: flex; align-items: center; gap: .55rem; border: 1px solid var(--line); border-radius: 10px; padding: .45rem .6rem; background: #fff; }
+.pick.dragging { opacity: .5; }
+.drag-handle { cursor: grab; color: #999; font-size: 1.1rem; letter-spacing: -2px; user-select: none; touch-action: none; }
+.pick-num { min-width: 1.6rem; text-align: center; font-size: .8rem; color: #888; font-variant-numeric: tabular-nums; }
+.pickthumb { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 8px; overflow: hidden; background: #111; display: flex; align-items: center; justify-content: center; }
+.pickthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vthumb { color: #fff; font-size: 1.3rem; }
+.vthumb.none { color: #666; }
+.picklabel { flex: 1; display: flex; gap: .5rem; align-items: flex-start; cursor: pointer; font-size: .95rem; }
+.picklabel input { width: auto; margin-top: .2rem; }
+.pickmove { display: flex; flex-direction: column; gap: .15rem; }
+.btn.tiny { padding: .15rem .45rem; font-size: .8rem; line-height: 1.2; }
