@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./db');
 const { loadFamily, canWrite } = require('./mw');
+const { ensureVideoThumb, deleteVideoThumb } = require('./video-thumb');
 
 const router = express.Router({ mergeParams: true });
 
@@ -54,6 +55,7 @@ function cleanupUploads(files) {
   for (const arr of Object.values(files)) {
     for (const f of arr || []) {
       try { fs.unlinkSync(path.join(UPLOAD_DIR, f.filename)); } catch (e) { /* noop */ }
+      try { fs.unlinkSync(path.join(UPLOAD_DIR, f.filename + '.thumb.jpg')); } catch (e) { /* noop */ }
     }
   }
 }
@@ -156,6 +158,8 @@ router.post('/', canWrite, (req, res, next) => {
     await db.query('INSERT INTO memory_people (memory_id, person_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [mid, pid]);
   }
   const doneCreateUrl = `/families/${req.family.id}/memories/${mid}`;
+  // Miniatura del video en segundo plano (no bloquea la respuesta).
+  if (video) ensureVideoThumb(path.join(UPLOAD_DIR, path.basename(video)));
   if (isXhr(req)) return res.json({ ok: true, redirect: doneCreateUrl });
   req.session.flash = req.t('memory_created');
   res.redirect(doneCreateUrl);
@@ -236,6 +240,13 @@ router.post('/:mid', canWrite, (req, res, next) => {
     await db.query('INSERT INTO memory_people (memory_id, person_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [mid, pid]);
   }
   const doneEditUrl = `/families/${req.family.id}/memories/${mid}`;
+  // Si se reemplazó el video, regenerar su miniatura en segundo plano.
+  if (req.files && req.files.video) {
+    if (old.video_path && old.video_path !== video) {
+      deleteVideoThumb(path.join(UPLOAD_DIR, path.basename(old.video_path)));
+    }
+    ensureVideoThumb(path.join(UPLOAD_DIR, path.basename(video)));
+  }
   if (isXhr(req)) return res.json({ ok: true, redirect: doneEditUrl });
   req.session.flash = req.t('memory_updated');
   res.redirect(doneEditUrl);

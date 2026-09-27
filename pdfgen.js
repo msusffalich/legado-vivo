@@ -4,6 +4,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const { t } = require('./i18n');
+const { ensureVideoThumb } = require('./video-thumb');
 
 const UPLOAD_DIR = () => process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
 
@@ -18,12 +19,14 @@ function fmtDate(m, lang) {
 }
 
 function generateAlbumPDF({ family, album, memories, lang }) {
-  return new Promise((resolve, reject) => {
+  return (async () => {
     const doc = new PDFDocument({ margin: 56, size: 'A4' });
     const chunks = [];
-    doc.on('data', (c) => chunks.push(c));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
+    const done = new Promise((resolve, reject) => {
+      doc.on('data', (c) => chunks.push(c));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+    });
 
     // Portada
     doc.moveDown(6);
@@ -49,9 +52,19 @@ function generateAlbumPDF({ family, album, memories, lang }) {
       if (m.photo_path) {
         const p = path.join(UPLOAD_DIR(), path.basename(m.photo_path));
         try {
-          if (fs.existsSync(p)) doc.image(p, { fit: [480, 320], align: 'center' });
-          doc.moveDown(0.8);
-        } catch (e) { /* imagen ilegible: se omite */ }
+          if (fs.existsSync(p)) placeImageFit(doc, p, 480, 320);
+          else doc.moveDown(0.8);
+        } catch (e) { /* imagen ilegible: se omite */ doc.moveDown(0.8); }
+      } else if (m.video_path) {
+        // Miniatura del primer cuadro del video (se genera si falta).
+        let thumb = null;
+        try { thumb = await ensureVideoThumb(path.join(UPLOAD_DIR(), path.basename(m.video_path))); } catch (e) { thumb = null; }
+        let shown = false;
+        if (thumb) {
+          try { placeImageFit(doc, thumb, 480, 320); shown = true; }
+          catch (e) { shown = false; }
+        }
+        if (!shown) drawVideoPlaceholder(doc, lang);
       }
       if (m.story) {
         doc.fontSize(12).fillColor('#2b2118').text(m.story, { align: 'justify' });
@@ -62,7 +75,40 @@ function generateAlbumPDF({ family, album, memories, lang }) {
       }
     }
     doc.end();
-  });
+    return done;
+  })();
+}
+
+// Dibuja una imagen centrada ajustada a fitW×fitH y AVANZA el cursor de texto
+// (pdfkit no mueve doc.y tras image(), lo que antes encimaba el texto).
+function placeImageFit(doc, absPath, fitW, fitH) {
+  const img = doc.openImage(absPath);
+  const s = Math.min(fitW / img.width, fitH / img.height);
+  const w = img.width * s, h = img.height * s;
+  const bottom = doc.page.height - doc.page.margins.bottom;
+  if (doc.y + h > bottom) doc.addPage();
+  const x = (doc.page.width - w) / 2;
+  doc.image(img, x, doc.y, { width: w, height: h });
+  doc.y += h;
+  doc.moveDown(0.8);
+}
+
+// Recuadro oscuro con símbolo de reproducción cuando no se pudo obtener la miniatura del video.
+function drawVideoPlaceholder(doc, lang) {
+  const w = 480, h = 270;
+  const bottom = doc.page.height - doc.page.margins.bottom;
+  if (doc.y + h > bottom) doc.addPage();
+  const x = (doc.page.width - w) / 2;
+  const y = doc.y;
+  doc.save();
+  doc.roundedRect(x, y, w, h, 8).fill('#1f2937');
+  // Triángulo dibujado con vectores: las fuentes base de pdfkit no traen el glifo ▶.
+  const cx = x + w / 2, cy = y + h / 2 - 10, s = 30;
+  doc.polygon([cx - s * 0.55, cy - s], [cx - s * 0.55, cy + s], [cx + s * 0.75, cy]).fill('#ffffff');
+  doc.fontSize(12).fillColor('#d1d5db').text('Video', x, y + h - 42, { width: w, align: 'center' });
+  doc.restore();
+  doc.y = y + h;
+  doc.moveDown(0.8);
 }
 
 module.exports = { generateAlbumPDF };

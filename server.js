@@ -93,9 +93,12 @@ async function main() {
   app.get('/uploads/:name', requireAuth, async (req, res) => {
     const name = path.basename(req.params.name || '');
     if (!name) return res.status(404).send('No encontrado');
-    const rel = '/uploads/' + name;
+    // Las miniaturas "<video>.thumb.jpg" se autorizan contra el video_path original.
+    const lookup = name.endsWith('.thumb.jpg')
+      ? '/uploads/' + name.slice(0, -'.thumb.jpg'.length)
+      : '/uploads/' + name;
     const { rows } = await db.query(
-      'SELECT family_id FROM memories WHERE photo_path=$1 OR audio_path=$1 OR video_path=$1 LIMIT 1', [rel]);
+      'SELECT family_id FROM memories WHERE photo_path=$1 OR audio_path=$1 OR video_path=$1 LIMIT 1', [lookup]);
     if (!rows.length) return res.status(404).send('No encontrado');
     const { rows: ok } = await db.query(
       'SELECT 1 FROM memberships WHERE family_id=$1 AND user_id=$2',

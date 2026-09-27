@@ -27,6 +27,7 @@ Legado Vivo es el archivo privado de tu familia:
 - **Historias**: genera texto con IA (OpenAI, opcional) citando sus fuentes, o escríbelas manualmente.
 - **Taller**: selecciona recuerdos y genera álbumes PDF por tema (cumpleaños, Navidad, viajes…).
   Cada álbum es una *edición*: cuando agregues recuerdos, crea una nueva edición.
+  Los recuerdos con video aparecen con una imagen de su primer cuadro.
 - **Búsqueda**: por palabras clave, o conversacional con IA si hay clave configurada.
 - **Asistente por WhatsApp**: manda foto + relato al número del asistente y el borrador entra
   al archivo como *pendiente de completar*.
@@ -122,6 +123,7 @@ Legado Vivo is your family's private archive:
 - **Stories**: AI-generate text (OpenAI, optional) with cited sources, or write manually.
 - **Workshop**: pick memories and build themed PDF albums (birthdays, Christmas, trips…).
   Each album is an *edition*: when you add memories, create a new edition.
+  Video memories appear with a still image of their first frame.
 - **Search**: keyword search, or conversational AI search when a key is set.
 - **WhatsApp assistant**: send a photo + story to the assistant's number and the draft
   enters the archive as *pending completion*.
@@ -213,7 +215,8 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
 | `i18n.js` / `locale-es.json` / `locale-en.json` | Bilingüe es/en |
 | `mw.js` | Auth y permisos / *Auth & permissions* |
 | `ai.js` | OpenAI opcional (historias, búsqueda) |
-| `pdfgen.js` | Álbumes PDF con pdfkit |
+| `pdfgen.js` | Álbumes PDF con pdfkit (incluye miniaturas de video) |
+| `video-thumb.js` | Extrae el primer cuadro del video como miniatura (ffmpeg) |
 | `routes-*.js` | Rutas: auth, familias, personas, recuerdos, historias, taller, búsqueda, puente, cuenta |
 | `view-*.ejs` | Vistas / *Views* (layout + páginas) |
 | `assets-style.css` / `assets-app.js` | Estilos y JS mínimo |
@@ -263,3 +266,15 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   (thumbnails in all views): the family page, timeline and search had their own memory
   grids without video thumbnails; they now show the same thumbnail (first frame + ▶ badge)
   as the library.*
+- 2026-09-27 (miniaturas de video en los álbumes PDF): al subir un video se extrae
+  automáticamente su primer cuadro como miniatura (`<video>.thumb.jpg`, con ffmpeg).
+  El álbum PDF ahora incluye esa imagen en los recuerdos con video y sin foto; si la
+  miniatura no se puede generar, se dibuja un recuadro con símbolo de reproducción.
+  De paso se corrigió que el texto del álbum se encimaba sobre las fotos (pdfkit no
+  avanza el cursor tras `image()`). Requiere la dependencia `ffmpeg-static`. /
+  *2026-09-27 (video thumbnails in PDF albums): uploading a video now automatically
+  extracts its first frame as a thumbnail (`<video>.thumb.jpg`, via ffmpeg). The PDF
+  album includes that image for video-only memories; if the thumbnail cannot be
+  generated, a placeholder box with a play symbol is drawn instead. Also fixed album
+  text overlapping photos (pdfkit does not advance the cursor after `image()`).
+  Requires the `ffmpeg-static` dependency.*
