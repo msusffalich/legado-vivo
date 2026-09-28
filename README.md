@@ -315,6 +315,12 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
+- Versión 1.3.1 — 2026-09-28: los **emojis** de WhatsApp se retiran del PDF del Taller (las fuentes del PDF
+  no los soportan y salían como símbolos extraños; la web los conserva), los comentarios de IA se generan
+  **sin emojis** y se corrigió el contador «RECUERDO n DE m» del PDF (mostraba n+1). /
+  *Version 1.3.1 — 2026-09-28: **emojis** from WhatsApp are stripped from the workshop PDF (PDF fonts cannot
+  render them and showed strange symbols; the web keeps them), AI comments are generated **without emojis**,
+  and the PDF «MEMORY n OF m» counter was fixed (it showed n+1).*
 - Versión 1.3.0 — 2026-09-28: **documentos adjuntos** (PDF/Word/texto, máx. 20 MB, narrativa extraída y buscable),
   **comentarios de IA opcionales** por recuerdo (requieren OpenAI), decoración temática extendida del PDF
   (banda superior, inicial decorada, marco doble, tarjetas de documento e IA), auditoría de 0 páginas en blanco

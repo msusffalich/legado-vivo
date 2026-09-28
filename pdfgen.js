@@ -46,8 +46,36 @@ function countText(n, lang) {
   return n === 1 ? t(lang, 'one_memory') : t(lang, 'memories_count', { n });
 }
 
+// Los emojis a color no existen en las fuentes estándar del PDF y salen como
+// símbolos extraños: se retiran solo del documento (la web los conserva).
+function pdfText(s) {
+  if (s === null || s === undefined) return s;
+  return String(s)
+    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')   // banderas (indicadores regionales)
+    .replace(/\p{Extended_Pictographic}/gu, '') // emojis pictográficos
+    .replace(/[\uFE0E\uFE0F\u200D\u20E3]/g, '') // selectores de variante, ZWJ, keycap
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function sanitizeForPdf(album, items) {
+  const a = Object.assign({}, album, { title: pdfText(album.title), narrative: pdfText(album.narrative) });
+  const list = (items || []).map((it) => {
+    if (it.kind === 'story') {
+      return Object.assign({}, it, { title: pdfText(it.title), text: pdfText(it.text) });
+    }
+    const m = Object.assign({}, it.memory);
+    ['title', 'story', 'transcription', 'place', 'people_names', 'doc_name', 'doc_text', 'ai_comment']
+      .forEach((k) => { if (m[k]) m[k] = pdfText(m[k]); });
+    return Object.assign({}, it, { memory: m });
+  });
+  return { album: a, items: list };
+}
+
 function generateAlbumPDF({ family, album, items, lang }) {
   return (async () => {
+    ({ album, items } = sanitizeForPdf(album, items));
     const theme = themeOf(album.theme);
     const doc = new PDFDocument({ margin: 56, size: 'A4', bufferPages: true });
     const chunks = [];
@@ -330,7 +358,7 @@ async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
 
   // Kicker, título y datos
   doc.fontSize(10).fillColor(theme.accent)
-    .text(t(lang, 'memory_of', { n: idx + 1, total }).toUpperCase(), { characterSpacing: 1.5 });
+    .text(t(lang, 'memory_of', { n: idx, total }).toUpperCase(), { characterSpacing: 1.5 });
   doc.moveDown(0.3);
   doc.fontSize(20).fillColor(INK).text(m.title || '—');
   drawDivider(doc, theme);

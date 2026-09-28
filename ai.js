@@ -72,8 +72,8 @@ async function generateMemoryComment(m, lang) {
         : 'Incluye una foto o un video.')
     : '';
   const sys = lang === 'en'
-    ? 'You write a short, warm comment (2-3 sentences) about a family memory, based ONLY on its title and narrative below. Do not invent names, dates, places or facts that are not present. Reply in English.'
-    : 'Escribes un comentario corto y cálido (2-3 frases) sobre un recuerdo familiar, basado SOLO en su título y narrativa de abajo. No inventes nombres, fechas, lugares ni hechos que no aparezcan. Responde en español neutro.';
+    ? 'You write a short, warm comment (2-3 sentences) about a family memory, based ONLY on its title and narrative below. Do not invent names, dates, places or facts that are not present. No emojis. Reply in English.'
+    : 'Escribes un comentario corto y cálido (2-3 frases) sobre un recuerdo familiar, basado SOLO en su título y narrativa de abajo. No inventes nombres, fechas, lugares ni hechos que no aparezcan. Sin emojis. Responde en español neutro.';
   const user = [
     m.title ? 'Título: ' + m.title : '',
     m.story ? 'Relato: ' + m.story : '',
