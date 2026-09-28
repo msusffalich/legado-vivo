@@ -18,10 +18,26 @@
 <div class="card">
   <p class="muted small"><%= fmtMemDate(memory) %><% if (memory.place) { %> · <%= memory.place %><% } %>
     <% if (author) { %> · <%= t('memory_by', { name: author }) %><% } %></p>
-  <% if (memory.photo_path) { %><img class="bigimg" src="<%= memory.photo_path %>" alt=""><% } %>
+  <% if (memory.photo_path) { %><img class="bigimg" src="<%= memory.photo_path %>" alt="">
+    <% if (memory.photo_url) { %><p class="muted small"><%= t('video_source') %>: <a href="<%= memory.photo_url %>" target="_blank" rel="noopener"><%= memory.photo_url %></a></p><% } %>
+  <% } else if (memory.photo_url && memory.photo_dl_status === 'pending') { %>
+    <p class="flash">⏳ <%= t('photo_downloading') %></p>
+  <% } else if (memory.photo_url && memory.photo_dl_status === 'error') { %>
+    <p class="err">⚠️ <%= t('photo_dl_failed') %><% if (memory.photo_dl_error) { %>: <%= memory.photo_dl_error %><% } %></p>
+    <p class="muted small"><%= t('video_source') %>: <a href="<%= memory.photo_url %>" target="_blank" rel="noopener"><%= memory.photo_url %></a></p>
+  <% } %>
   <% if (memory.video_path) { %>
     <h4><%= t('video_label') %></h4>
-    <video controls preload="metadata" src="<%= memory.video_path %>" style="max-width:100%;border-radius:8px"></video><% } %>
+    <video controls preload="metadata" src="<%= memory.video_path %>" style="max-width:100%;border-radius:8px"></video>
+    <% if (memory.video_url) { %><p class="muted small"><%= t('video_source') %>: <a href="<%= memory.video_url %>" target="_blank" rel="noopener"><%= memory.video_url %></a></p><% } %>
+  <% } else if (memory.video_url && memory.video_dl_status === 'pending') { %>
+    <h4><%= t('video_label') %></h4>
+    <p class="flash">⏳ <%= t('video_downloading') %></p>
+  <% } else if (memory.video_url && memory.video_dl_status === 'error') { %>
+    <h4><%= t('video_label') %></h4>
+    <p class="err">⚠️ <%= t('video_dl_failed') %><% if (memory.video_dl_error) { %>: <%= memory.video_dl_error %><% } %></p>
+    <p class="muted small"><%= t('video_source') %>: <a href="<%= memory.video_url %>" target="_blank" rel="noopener"><%= memory.video_url %></a></p>
+  <% } %>
   <% if (memory.story) { %><p class="story"><%= memory.story %></p><% } %>
   <% if (memory.transcription) { %>
     <h4><%= t('transcription_label') %></h4><p class="story muted"><%= memory.transcription %></p><% } %>

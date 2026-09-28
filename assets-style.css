@@ -106,4 +106,10 @@ audio { width: 100%; }
 .picklabel { flex: 1; display: flex; gap: .5rem; align-items: flex-start; cursor: pointer; font-size: .95rem; }
 .picklabel input { width: auto; margin-top: .2rem; }
 .pickmove { display: flex; flex-direction: column; gap: .15rem; }
+.pick.story { border-style: dashed; background: #fffdf6; }
+.pick.story .storyicon { font-size: 1.4rem; }
+.pick .storyedit { flex: 1; display: grid; gap: .3rem; }
+.pick .storyedit input, .pick .storyedit textarea { width: 100%; }
+.storycard { border-style: dashed; background: #fffdf6; }
+.storycard .storyicon { font-size: 1.6rem; }
 .btn.tiny { padding: .15rem .45rem; font-size: .8rem; line-height: 1.2; }

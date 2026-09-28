@@ -21,6 +21,22 @@ async function main() {
   }
   await runMigrations();
 
+  // Reanudar descargas de video/foto por URL que quedaron pendientes (p. ej. tras un reinicio).
+  try {
+    const { queueVideoDownload, queueImageDownload } = require('./routes-memories');
+    const { rows: pendV } = await db.query(
+      "SELECT id, video_url FROM memories WHERE video_dl_status='pending' AND video_url IS NOT NULL"
+    ).catch(() => ({ rows: [] }));
+    const { rows: pendP } = await db.query(
+      "SELECT id, photo_url FROM memories WHERE photo_dl_status='pending' AND photo_url IS NOT NULL"
+    ).catch(() => ({ rows: [] }));
+    if (pendV.length || pendP.length) {
+      console.log(`[media-url] reanudando ${pendV.length} video(s) y ${pendP.length} foto(s) pendiente(s)...`);
+      for (const r of pendV) queueVideoDownload(r.id, r.video_url);
+      for (const r of pendP) queueImageDownload(r.id, r.photo_url);
+    }
+  } catch (e) { console.error('[media-url] no se pudo reanudar:', e.message); }
+
   const app = express();
   app.set('trust proxy', 1);
   app.set('view engine', 'ejs');

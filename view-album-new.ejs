@@ -2,6 +2,7 @@
 <h1><%= album ? t('edit_album') : t('new_album') %></h1>
 <div class="card">
 <form method="post" action="<%= formAction || ('/families/' + family.id + '/workshop') %>" id="albumForm">
+  <input type="hidden" name="blocks" id="blocksJson" value="">
   <label><%= t('album_title') %> *<input name="title" required maxlength="200" placeholder="<%= t('album_hint') %>" value="<%= album ? album.title : '' %>"></label>
   <label><%= t('album_narrative') %> <span class="muted small">(<%= t('optional') %>)</span>
     <textarea name="narrative" rows="4" maxlength="5000" placeholder="<%= t('album_narrative_hint') %>"><%= album && album.narrative ? album.narrative : '' %></textarea>
@@ -42,9 +43,27 @@
     </div>
   </div>
 
-  <p class="muted small"><%= t('reorder_hint') %></p>
+  <p class="muted small"><%= t('album_blocks_hint') %></p>
+  <p><button type="button" class="btn small" id="btnAddStoryTop">📖 <%= t('add_story') %></button></p>
   <div class="picks" id="pickList">
-  <% memories.forEach(function(m, i) {
+  <% picks.forEach(function(pk, i) {
+       if (pk.kind === 'story') { %>
+    <div class="pick story">
+      <span class="drag-handle" title="<%= t('reorder_hint_short') %>" draggable="true">⋮⋮</span>
+      <span class="pick-num"><%= i + 1 %></span>
+      <span class="storyicon">📖</span>
+      <div class="storyedit">
+        <input type="text" class="story-title" maxlength="200" placeholder="<%= t('story_title_ph') %>" value="<%= pk.title %>">
+        <textarea class="story-text" rows="3" maxlength="5000" placeholder="<%= t('story_text_ph') %>"><%= pk.text %></textarea>
+      </div>
+      <span class="pickmove">
+        <button type="button" class="btn tiny ghost" data-move="-1" title="<%= t('move_up') %>">↑</button>
+        <button type="button" class="btn tiny ghost" data-move="1" title="<%= t('move_down') %>">↓</button>
+        <button type="button" class="btn tiny ghost danger" data-del-story title="<%= t('delete') %>">✕</button>
+      </span>
+    </div>
+  <%   } else {
+       const m = pk.m;
        const searchText = ((m.title || '') + ' ' + (m.story || '') + ' ' + (m.place || '') + ' ' + (m.people_names || '')).replace(/\s+/g, ' ').toLowerCase();
   %>
     <div class="pick" draggable="false"
@@ -60,16 +79,18 @@
            else { %><span class="vthumb none">—</span><% } %>
       </span>
       <label class="picklabel">
-        <input type="checkbox" name="memory_ids" value="<%= m.id %>"<%= album && Array.isArray(album.memory_ids) && album.memory_ids.includes(m.id) ? ' checked' : '' %>>
+        <input type="checkbox" class="pickcheck" value="<%= m.id %>"<%= pk.checked ? ' checked' : '' %>>
         <span><strong><%= m.title %></strong><br>
         <span class="muted small"><%= fmtMemDate(m) %><% if (m.people_names) { %> · <%= m.people_names %><% } %></span></span>
       </label>
       <span class="pickmove">
         <button type="button" class="btn tiny ghost" data-move="-1" title="<%= t('move_up') %>">↑</button>
         <button type="button" class="btn tiny ghost" data-move="1" title="<%= t('move_down') %>">↓</button>
+        <button type="button" class="btn tiny ghost" data-add-story title="<%= t('insert_story') %>">＋📖</button>
       </span>
     </div>
-  <% }); %>
+  <%   }
+     }); %>
   </div>
   <% if (!memories.length) { %><p class="muted"><%= t('no_memories') %></p><% } %>
   <p><button class="btn" type="submit"><%= submitLabel || t('create_album') %></button>
@@ -80,11 +101,20 @@
 (function () {
   var list = document.getElementById('pickList');
   if (!list) return;
-  var items = Array.prototype.slice.call(list.querySelectorAll('.pick'));
+  var T = {
+    titlePh: <%= JSON.stringify(t('story_title_ph')) %>,
+    textPh: <%= JSON.stringify(t('story_text_ph')) %>,
+    up: <%= JSON.stringify(t('move_up')) %>,
+    down: <%= JSON.stringify(t('move_down')) %>,
+    del: <%= JSON.stringify(t('delete')) %>
+  };
   var fFrom = document.getElementById('fFrom'), fTo = document.getElementById('fTo'),
       fKw = document.getElementById('fKw'), fPeople = document.getElementById('fPeople'),
       countLabel = document.getElementById('countLabel');
 
+  function memItems() {
+    return Array.prototype.slice.call(list.querySelectorAll('.pick[data-id]'));
+  }
   function selectedPeople() {
     if (!fPeople) return [];
     return Array.prototype.map.call(fPeople.querySelectorAll('.chip[aria-pressed="true"]'),
@@ -92,8 +122,8 @@
   }
   function applyFilters() {
     var from = fFrom.value, to = fTo.value, kw = fKw.value.trim().toLowerCase(), ppl = selectedPeople();
-    var shown = 0;
-    items.forEach(function (it) {
+    var shown = 0, total = memItems().length;
+    memItems().forEach(function (it) {
       var d = it.getAttribute('data-date'), ok = true;
       if (from && (!d || d < from)) ok = false;
       if (to && (!d || d > to)) ok = false;
@@ -106,7 +136,7 @@
       if (ok) shown++;
     });
     countLabel.textContent = countLabel.getAttribute('data-pattern')
-      .replace('{shown}', shown).replace('{total}', items.length);
+      .replace('{shown}', shown).replace('{total}', total);
   }
   ['input', 'change'].forEach(function (ev) {
     fFrom.addEventListener(ev, applyFilters);
@@ -124,8 +154,8 @@
     applyFilters();
   });
   document.getElementById('btnSelectVisible').addEventListener('click', function () {
-    items.forEach(function (it) {
-      if (it.style.display !== 'none') it.querySelector('input[type=checkbox]').checked = true;
+    memItems().forEach(function (it) {
+      if (it.style.display !== 'none') it.querySelector('.pickcheck').checked = true;
     });
   });
 
@@ -136,13 +166,41 @@
       it.querySelector('.pick-num').textContent = n;
     });
   }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function storyNode(title, text) {
+    var d = document.createElement('div');
+    d.className = 'pick story';
+    d.innerHTML =
+      '<span class="drag-handle" draggable="true">⋮⋮</span>' +
+      '<span class="pick-num"></span><span class="storyicon">📖</span>' +
+      '<div class="storyedit"><input type="text" class="story-title" maxlength="200" placeholder="' + esc(T.titlePh) + '" value="' + esc(title) + '">' +
+      '<textarea class="story-text" rows="3" maxlength="5000" placeholder="' + esc(T.textPh) + '">' + esc(text) + '</textarea></div>' +
+      '<span class="pickmove"><button type="button" class="btn tiny ghost" data-move="-1" title="' + esc(T.up) + '">↑</button>' +
+      '<button type="button" class="btn tiny ghost" data-move="1" title="' + esc(T.down) + '">↓</button>' +
+      '<button type="button" class="btn tiny ghost danger" data-del-story title="' + esc(T.del) + '">✕</button></span>';
+    return d;
+  }
+  function addStory(afterEl) {
+    var node = storyNode('', '');
+    if (afterEl && afterEl.nextSibling) list.insertBefore(node, afterEl.nextSibling);
+    else if (afterEl) list.appendChild(node);
+    else list.insertBefore(node, list.firstChild);
+    renumber();
+    var inp = node.querySelector('.story-title');
+    if (inp) inp.focus();
+  }
+  document.getElementById('btnAddStoryTop').addEventListener('click', function () { addStory(null); });
+
   // Arrastrar desde el asa ⋮⋮
   var dragEl = null;
   list.addEventListener('dragstart', function (e) {
     var h = e.target.closest('.drag-handle'); if (!h) { e.preventDefault(); return; }
     dragEl = h.closest('.pick');
     e.dataTransfer.effectAllowed = 'move';
-    try { e.dataTransfer.setData('text/plain', dragEl.getAttribute('data-id')); } catch (err) {}
+    try { e.dataTransfer.setData('text/plain', 'x'); } catch (err) {}
     dragEl.classList.add('dragging');
   });
   list.addEventListener('dragend', function () {
@@ -160,23 +218,51 @@
     }
     if (after) list.insertBefore(dragEl, after); else list.appendChild(dragEl);
   });
-  // Botones ↑ ↓ (funcionan también en táctil)
+  // Botones ↑ ↓ ✕ ＋📖 (funcionan también en táctil)
   list.addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-move]'); if (!b) return;
-    var it = b.closest('.pick'), dir = parseInt(b.getAttribute('data-move'), 10);
-    if (dir < 0 && it.previousElementSibling) list.insertBefore(it, it.previousElementSibling);
-    if (dir > 0 && it.nextElementSibling) list.insertBefore(it.nextElementSibling, it);
-    renumber();
+    var b = e.target.closest('button'); if (!b) return;
+    var it = b.closest('.pick');
+    if (b.hasAttribute('data-move')) {
+      var dir = parseInt(b.getAttribute('data-move'), 10);
+      if (dir < 0 && it.previousElementSibling) list.insertBefore(it, it.previousElementSibling);
+      if (dir > 0 && it.nextElementSibling) list.insertBefore(it.nextElementSibling, it);
+      renumber();
+    } else if (b.hasAttribute('data-del-story')) {
+      it.remove(); renumber();
+    } else if (b.hasAttribute('data-add-story')) {
+      addStory(it);
+    }
   });
   document.getElementById('btnSortDate').addEventListener('click', function () {
-    var arr = Array.prototype.slice.call(list.querySelectorAll('.pick'));
-    arr.sort(function (a, b) {
+    // Ordena los recuerdos por fecha; las historias se quedan en su posición.
+    var mems = memItems();
+    mems.sort(function (a, b) {
       var da = a.getAttribute('data-date'), db = b.getAttribute('data-date');
       if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
       return da < db ? -1 : (da > db ? 1 : 0);
     });
-    arr.forEach(function (it) { list.appendChild(it); });
+    var mi = 0;
+    var frag = document.createDocumentFragment();
+    Array.prototype.forEach.call(list.querySelectorAll('.pick'), function (it) {
+      frag.appendChild(it.hasAttribute('data-id') ? mems[mi++] : it);
+    });
+    list.appendChild(frag);
     renumber();
+  });
+  // Al enviar: serializa los bloques en orden
+  document.getElementById('albumForm').addEventListener('submit', function () {
+    var blocks = [];
+    Array.prototype.forEach.call(list.querySelectorAll('.pick'), function (it) {
+      if (it.classList.contains('story')) {
+        var ti = it.querySelector('.story-title').value.trim();
+        var tx = it.querySelector('.story-text').value.trim();
+        if (ti || tx) blocks.push({ type: 'story', title: ti, text: tx });
+      } else {
+        var cb = it.querySelector('.pickcheck');
+        if (cb && cb.checked) blocks.push({ type: 'memory', id: parseInt(cb.value, 10) });
+      }
+    });
+    document.getElementById('blocksJson').value = JSON.stringify(blocks);
   });
   applyFilters();
 })();

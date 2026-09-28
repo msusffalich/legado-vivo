@@ -46,7 +46,7 @@ function countText(n, lang) {
   return n === 1 ? t(lang, 'one_memory') : t(lang, 'memories_count', { n });
 }
 
-function generateAlbumPDF({ family, album, memories, lang }) {
+function generateAlbumPDF({ family, album, items, lang }) {
   return (async () => {
     const theme = themeOf(album.theme);
     const doc = new PDFDocument({ margin: 56, size: 'A4', bufferPages: true });
@@ -57,26 +57,38 @@ function generateAlbumPDF({ family, album, memories, lang }) {
       doc.on('error', reject);
     });
 
+    const memories = items.filter((it) => it.kind === 'memory').map((it) => it.memory);
     drawCover(doc, { family, album, memories, lang, theme });
 
     const narrative = album.narrative && String(album.narrative).trim();
     if (narrative) drawNarrative(doc, { narrative, lang, theme });
 
-    for (let i = 0; i < memories.length; i++) {
-      await drawMemory(doc, { m: memories[i], idx: i, total: memories.length, albumTitle: album.title, lang, theme });
+    let memIdx = 0;
+    for (const it of items) {
+      if (it.kind === 'story') {
+        drawStoryBlock(doc, { title: it.title, text: it.text, albumTitle: album.title, lang, theme });
+      } else {
+        memIdx++;
+        await drawMemory(doc, { m: it.memory, idx: memIdx, total: memories.length, albumTitle: album.title, lang, theme });
+      }
     }
 
     // Números de página al pie (todas las páginas menos la portada).
+    // El pie se escribe dentro del margen inferior: se reduce el margen
+    // temporalmente porque pdfkit abre una página nueva si el texto supera maxY().
     const range = doc.bufferedPageRange();
     for (let i = 1; i < range.count; i++) {
       doc.switchToPage(i);
       const pg = doc.page;
+      const oldBottom = pg.margins.bottom;
+      pg.margins.bottom = 20;
       doc.fontSize(9).fillColor(FAINT).text(
         String(i + 1),
         pg.margins.left,
         pg.height - 38,
         { width: pg.width - pg.margins.left - pg.margins.right, align: 'center' }
       );
+      pg.margins.bottom = oldBottom;
     }
 
     doc.end();
@@ -188,6 +200,50 @@ function drawNarrative(doc, { narrative, lang, theme }) {
   }
 }
 
+// ---- Historia intermedia: icono + mini-historia propia, en página aparte ----
+function drawStoryBlock(doc, { title, text, albumTitle, lang, theme }) {
+  doc.addPage();
+  const pg = doc.page;
+
+  // Cabecera editorial
+  doc.fontSize(9).fillColor(FAINT).text(truncate(albumTitle, 70), { align: 'right' });
+  const hy = doc.y + 4;
+  doc.strokeColor(theme.accent).lineWidth(0.75)
+    .moveTo(pg.margins.left, hy).lineTo(pg.width - pg.margins.right, hy).stroke();
+  doc.moveDown(2);
+
+  // Icono vectorial: libro abierto
+  const cx = pg.width / 2;
+  const y0 = doc.y + 10;
+  doc.save();
+  doc.fillColor(theme.soft).strokeColor(theme.accent).lineWidth(1.5);
+  doc.moveTo(cx, y0).lineTo(cx - 54, y0 - 10).lineTo(cx - 54, y0 + 36).lineTo(cx, y0 + 46).closePath().fillAndStroke();
+  doc.moveTo(cx, y0).lineTo(cx + 54, y0 - 10).lineTo(cx + 54, y0 + 36).lineTo(cx, y0 + 46).closePath().fillAndStroke();
+  doc.strokeColor(theme.accent).lineWidth(1);
+  for (let k = 0; k < 3; k++) {
+    const ly = y0 + 10 + k * 10;
+    doc.moveTo(cx - 44, ly - 3).lineTo(cx - 12, ly).stroke();
+    doc.moveTo(cx + 12, ly).lineTo(cx + 44, ly - 3).stroke();
+  }
+  doc.restore();
+  doc.y = y0 + 66;
+
+  doc.fontSize(10).fillColor(theme.accent)
+    .text(t(lang, 'story_block').toUpperCase(), { align: 'center', characterSpacing: 1.5 });
+  doc.moveDown(0.3);
+  if (title) {
+    doc.fontSize(20).fillColor(INK).text(title, { align: 'center' });
+    doc.moveDown(0.6);
+  }
+  const rw = 48, rx = (pg.width - rw) / 2;
+  doc.strokeColor(theme.accent).lineWidth(1.5).moveTo(rx, doc.y).lineTo(rx + rw, doc.y).stroke();
+  doc.moveDown(0.8);
+  for (const p of paragraphs(text)) {
+    doc.fontSize(11.5).fillColor(INK).text(p, { align: 'justify', lineGap: 4 });
+    doc.moveDown(0.5);
+  }
+}
+
 // ---- Página de un recuerdo: imagen arriba, texto debajo, nada se parte ----
 async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
   doc.addPage();
@@ -218,6 +274,10 @@ async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
   if (m.people_names) doc.text(`${t(lang, 'people_label')}: ${m.people_names}`);
   doc.moveDown(0.8);
 
+  // Botón de audio: enlace a la URL absoluta del archivo, con etiqueta en el
+  // idioma del usuario. Requiere APP_URL configurada en el servidor.
+  drawAudioButton(doc, { m, lang, theme });
+
   // Relato por párrafos justificados
   for (const p of paragraphs(m.story)) {
     doc.fontSize(11.5).fillColor(INK).text(p, { align: 'justify', lineGap: 4 });
@@ -236,6 +296,33 @@ async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
   }
 }
 
+// Botón "Escuchar audio": rectángulo con el color de la temática y texto blanco,
+// que enlaza a la URL absoluta del audio (APP_URL + ruta). La etiqueta va en el
+// idioma del usuario. Si no hay APP_URL o el archivo no existe, no se dibuja.
+function drawAudioButton(doc, { m, lang, theme }) {
+  if (!m.audio_path) return;
+  const base = (process.env.APP_URL || '').replace(/\/$/, '');
+  if (!base) return;
+  const abs = path.join(UPLOAD_DIR(), path.basename(m.audio_path));
+  if (!fs.existsSync(abs)) return;
+  const label = t(lang, 'listen_audio');
+  doc.fontSize(11);
+  const bw = doc.widthOfString(label) + 40;
+  const bh = 28;
+  const bottom = doc.page.height - doc.page.margins.bottom;
+  if (doc.y + bh > bottom) doc.addPage();
+  const x = doc.page.margins.left;
+  const y = doc.y;
+  doc.save();
+  doc.roundedRect(x, y, bw, bh, 9).fill(theme.accent);
+  doc.fillColor('#ffffff')
+    .text(label, x, y + 8.5, { width: bw, align: 'center', link: base + m.audio_path });
+  doc.restore();
+  doc.y = y + bh;
+  doc.fillColor(INK);
+  doc.moveDown(0.8);
+}
+
 // Foto existente, o miniatura del primer cuadro del video (se genera si falta).
 async function resolveImage(m) {
   if (m.photo_path) {
@@ -250,17 +337,23 @@ async function resolveImage(m) {
   return null;
 }
 
-// Dibuja una imagen centrada ajustada a maxW×maxH, con marco fino, y AVANZA el
-// cursor de texto (pdfkit no mueve doc.y tras image(), lo que antes encimaba el texto).
+// Dibuja una imagen centrada ajustada a maxW×maxH SIN distorsión: se usa la
+// opción `fit` de pdfkit (escala uniforme) y el tamaño real se calcula igual
+// que lo hace pdfkit, incluyendo el intercambio de ancho/alto que exige la
+// orientación EXIF (las fotos verticales de teléfono suelen traerla).
+// Después de image() se AVANZA el cursor (pdfkit no lo mueve solo).
 function placeImageFit(doc, absPath, maxW, maxH) {
   const img = doc.openImage(absPath);
-  const s = Math.min(maxW / img.width, maxH / img.height, 1);
-  const w = img.width * s, h = img.height * s;
+  let iw = img.width, ih = img.height;
+  if (img.orientation > 4) { const tmp = iw; iw = ih; ih = tmp; }
+  const bp = maxW / maxH, ip = iw / ih;
+  let w, h;
+  if (ip > bp) { w = maxW; h = maxW / ip; } else { h = maxH; w = maxH * ip; }
   const bottom = doc.page.height - doc.page.margins.bottom;
   if (doc.y + h > bottom) doc.addPage();
   const x = (doc.page.width - w) / 2;
   const y0 = doc.y;
-  doc.image(img, x, y0, { width: w, height: h });
+  doc.image(img, x, y0, { fit: [maxW, maxH] });
   doc.strokeColor(RULE).lineWidth(0.5).rect(x, y0, w, h).stroke();
   doc.y = y0 + h;
   doc.moveDown(0.8);

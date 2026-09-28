@@ -6,6 +6,7 @@ const fs = require('fs');
 const db = require('./db');
 const { loadFamily, canWrite } = require('./mw');
 const { ensureVideoThumb, deleteVideoThumb } = require('./video-thumb');
+const { isSupportedVideoUrl, downloadVideoUrl, isSupportedImageUrl, downloadImageUrl, downloadInstagramImage } = require('./media-download');
 
 const router = express.Router({ mergeParams: true });
 
@@ -101,6 +102,83 @@ function personIds(body) {
   return ids.map((x) => parseInt(x, 10)).filter(Boolean);
 }
 
+// Descarga en segundo plano el video de una URL y lo adjunta al recuerdo.
+// No bloquea la respuesta: el recuerdo queda con video_dl_status='pending'
+// hasta que termina ('ready') o falla ('error', con el motivo en video_dl_error).
+function queueVideoDownload(memoryId, url) {
+  if (!url || !isSupportedVideoUrl(url)) return;
+  (async () => {
+    const fname = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.mp4';
+    const dest = path.join(UPLOAD_DIR, fname);
+    const r = await downloadVideoUrl(url, dest);
+    if (r.ok) {
+      await db.query(
+        `UPDATE memories SET video_path=$1, video_dl_status='ready', video_dl_error=NULL, updated_at=now() WHERE id=$2`,
+        ['/uploads/' + fname, memoryId]
+      );
+      ensureVideoThumb(dest);
+    } else {
+      try { fs.unlinkSync(dest); } catch (e) { /* noop */ }
+      await db.query(
+        `UPDATE memories SET video_dl_status='error', video_dl_error=$1, updated_at=now() WHERE id=$2`,
+        [String(r.error || 'download-failed').slice(0, 500), memoryId]
+      );
+    }
+  })().catch((e) => console.error('[video-url]', e.message));
+}
+
+// Descarga en segundo plano la foto de una URL y la adjunta al recuerdo.
+// Los posts de Instagram (/p/, /reel/) se resuelven con yt-dlp; las URLs
+// directas de imagen se descargan por HTTP (content-type image/*).
+function queueImageDownload(memoryId, url) {
+  if (!url || !isSupportedImageUrl(url)) return;
+  (async () => {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    const r = host === 'instagram.com'
+      ? await downloadInstagramImage(url, UPLOAD_DIR)
+      : await downloadImageUrl(url, UPLOAD_DIR);
+    if (r.ok) {
+      await db.query(
+        `UPDATE memories SET photo_path=$1, photo_dl_status='ready', photo_dl_error=NULL, updated_at=now() WHERE id=$2`,
+        ['/uploads/' + r.filename, memoryId]
+      );
+    } else {
+      await db.query(
+        `UPDATE memories SET photo_dl_status='error', photo_dl_error=$1, updated_at=now() WHERE id=$2`,
+        [String(r.error || 'download-failed').slice(0, 500), memoryId]
+      );
+    }
+  })().catch((e) => console.error('[photo-url]', e.message));
+}
+
+// Valida la URL de video del formulario; responde 400 si el host no es válido.
+function checkVideoUrl(req, res, fallback) {
+  const url = (req.body.video_url || '').trim();
+  if (url && !isSupportedVideoUrl(url)) {
+    const msg = req.t('video_url_invalid');
+    cleanupUploads(req.files);
+    if (isXhr(req)) { res.status(400).json({ ok: false, error: msg }); return true; }
+    req.session.flash = msg;
+    res.redirect(fallback);
+    return true;
+  }
+  return false;
+}
+
+// Valida la URL de foto del formulario; responde 400 si no es válida.
+function checkPhotoUrl(req, res, fallback) {
+  const url = (req.body.photo_url || '').trim();
+  if (url && !isSupportedImageUrl(url)) {
+    const msg = req.t('photo_url_invalid');
+    cleanupUploads(req.files);
+    if (isXhr(req)) { res.status(400).json({ ok: false, error: msg }); return true; }
+    req.session.flash = msg;
+    res.redirect(fallback);
+    return true;
+  }
+  return false;
+}
+
 // ---- Lista ----
 router.get('/', async (req, res) => {
   const status = req.query.status === 'pending' ? 'pending' : null;
@@ -131,6 +209,8 @@ router.post('/', canWrite, (req, res, next) => {
     if (err) return uploadFail(req, res, err, `/families/${req.family.id}/memories/new`);
     const sizeErr = checkMediaSizes(req);
     if (sizeErr) return uploadFail(req, res, sizeErr, `/families/${req.family.id}/memories/new`);
+    if (checkVideoUrl(req, res, `/families/${req.family.id}/memories/new`)) return;
+    if (checkPhotoUrl(req, res, `/families/${req.family.id}/memories/new`)) return;
     next();
   });
 }, async (req, res, next) => {
@@ -144,14 +224,19 @@ router.post('/', canWrite, (req, res, next) => {
   const photo = req.files && req.files.photo ? '/uploads/' + req.files.photo[0].filename : null;
   const audio = req.files && req.files.audio ? '/uploads/' + req.files.audio[0].filename : null;
   const video = req.files && req.files.video ? '/uploads/' + req.files.video[0].filename : null;
+  const videoUrl = (b.video_url || '').trim() || null;
+  const photoUrl = (b.photo_url || '').trim() || null;
   const memoryDate = (b.memory_date || '').trim() || null;
   const { rows } = await db.query(
     `INSERT INTO memories (family_id, title, story, transcription, place, memory_date, date_precision,
-      photo_path, audio_path, video_path, interview, status, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'complete',$12) RETURNING id`,
+      photo_path, audio_path, video_path, video_url, video_dl_status,
+      photo_url, photo_dl_status, interview, status, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'complete',$16) RETURNING id`,
     [req.family.id, title, b.story || '', b.transcription || '', (b.place || '').trim(), memoryDate,
      ['exact', 'approx'].includes(b.date_precision) ? b.date_precision : 'unknown',
-     photo, audio, video, JSON.stringify(interview), req.session.user.id]
+     photo, audio, video, videoUrl, videoUrl && !video ? 'pending' : 'ready',
+     photoUrl, photoUrl && !photo ? 'pending' : 'ready',
+     JSON.stringify(interview), req.session.user.id]
   );
   const mid = rows[0].id;
   for (const pid of personIds(b)) {
@@ -160,6 +245,9 @@ router.post('/', canWrite, (req, res, next) => {
   const doneCreateUrl = `/families/${req.family.id}/memories/${mid}`;
   // Miniatura del video en segundo plano (no bloquea la respuesta).
   if (video) ensureVideoThumb(path.join(UPLOAD_DIR, path.basename(video)));
+  // Video/foto por URL: se descargan en segundo plano y se adjuntan al terminar.
+  if (videoUrl && !video) queueVideoDownload(mid, videoUrl);
+  if (photoUrl && !photo) queueImageDownload(mid, photoUrl);
   if (isXhr(req)) return res.json({ ok: true, redirect: doneCreateUrl });
   req.session.flash = req.t('memory_created');
   res.redirect(doneCreateUrl);
@@ -208,6 +296,8 @@ router.post('/:mid', canWrite, (req, res, next) => {
     if (err) return uploadFail(req, res, err, `/families/${req.family.id}/memories/${req.params.mid}/edit`);
     const sizeErr = checkMediaSizes(req);
     if (sizeErr) return uploadFail(req, res, sizeErr, `/families/${req.family.id}/memories/${req.params.mid}/edit`);
+    if (checkVideoUrl(req, res, `/families/${req.family.id}/memories/${req.params.mid}/edit`)) return;
+    if (checkPhotoUrl(req, res, `/families/${req.family.id}/memories/${req.params.mid}/edit`)) return;
     next();
   });
 }, async (req, res, next) => {
@@ -227,13 +317,24 @@ router.post('/:mid', canWrite, (req, res, next) => {
   const photo = req.files && req.files.photo ? '/uploads/' + req.files.photo[0].filename : old.photo_path;
   const audio = req.files && req.files.audio ? '/uploads/' + req.files.audio[0].filename : old.audio_path;
   const video = req.files && req.files.video ? '/uploads/' + req.files.video[0].filename : old.video_path;
+  const videoUrl = (b.video_url || '').trim() || null;
+  const photoUrl = (b.photo_url || '').trim() || null;
+  const urlChanged = videoUrl !== (old.video_url || null);
+  const photoUrlChanged = photoUrl !== (old.photo_url || null);
+  const dlStatus = video ? 'ready' : (videoUrl && urlChanged ? 'pending' : (old.video_dl_status || 'ready'));
+  const photoDlStatus = photo ? 'ready' : (photoUrl && photoUrlChanged ? 'pending' : (old.photo_dl_status || 'ready'));
   const title = (b.title || '').trim() || old.title;
   await db.query(
     `UPDATE memories SET title=$1, story=$2, transcription=$3, place=$4, memory_date=$5, date_precision=$6,
-      photo_path=$7, audio_path=$8, video_path=$9, interview=$10, status=$11, updated_at=now() WHERE id=$12`,
+      photo_path=$7, audio_path=$8, video_path=$9, video_url=$10, video_dl_status=$11,
+      video_dl_error=CASE WHEN $11='pending' THEN NULL ELSE video_dl_error END,
+      photo_url=$12, photo_dl_status=$13,
+      photo_dl_error=CASE WHEN $13='pending' THEN NULL ELSE photo_dl_error END,
+      interview=$14, status=$15, updated_at=now() WHERE id=$16`,
     [title, b.story || '', b.transcription || '', (b.place || '').trim(), (b.memory_date || '').trim() || null,
      ['exact', 'approx', 'unknown'].includes(b.date_precision) ? b.date_precision : 'unknown',
-     photo, audio, video, JSON.stringify(interview), b.status === 'pending' ? 'pending' : 'complete', mid]
+     photo, audio, video, videoUrl, dlStatus, photoUrl, photoDlStatus,
+     JSON.stringify(interview), b.status === 'pending' ? 'pending' : 'complete', mid]
   );
   await db.query('DELETE FROM memory_people WHERE memory_id=$1', [mid]);
   for (const pid of personIds(b)) {
@@ -247,6 +348,10 @@ router.post('/:mid', canWrite, (req, res, next) => {
     }
     ensureVideoThumb(path.join(UPLOAD_DIR, path.basename(video)));
   }
+  // Nueva URL de video: descargar en segundo plano.
+  if (videoUrl && urlChanged && !req.files.video) queueVideoDownload(mid, videoUrl);
+  // Nueva URL de foto: descargar en segundo plano.
+  if (photoUrl && photoUrlChanged && !req.files.photo) queueImageDownload(mid, photoUrl);
   if (isXhr(req)) return res.json({ ok: true, redirect: doneEditUrl });
   req.session.flash = req.t('memory_updated');
   res.redirect(doneEditUrl);
@@ -278,3 +383,6 @@ router.get('/timeline/view', async (req, res) => {
 });
 
 module.exports = router;
+// Para reanudar descargas pendientes al arrancar (server.js).
+module.exports.queueVideoDownload = queueVideoDownload;
+module.exports.queueImageDownload = queueImageDownload;

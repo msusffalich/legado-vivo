@@ -40,23 +40,64 @@ async function builderData(familyId) {
   return { memories: rows, persons: pers };
 }
 
-// Normaliza los ids enviados por el formulario: enteros, de esta familia,
-// en el orden exacto en que el usuario los dejó en la lista.
-async function cleanIds(familyId, raw) {
-  let ids = raw || [];
-  if (!Array.isArray(ids)) ids = [ids];
-  ids = ids.map((x) => parseInt(x, 10)).filter(Boolean);
-  if (!ids.length) return [];
-  const { rows } = await db.query('SELECT id FROM memories WHERE family_id=$1 AND id = ANY($2)', [familyId, ids]);
-  const ok = new Set(rows.map((r) => r.id));
-  return ids.filter((id) => ok.has(id));
+// El contenido del álbum es una lista ordenada de bloques:
+//   { type: 'memory', id }            → un recuerdo
+//   { type: 'story', title, text }    → historia intermedia (icono + mini-historia)
+// Formato anterior: [12, 7] (solo ids) → se normaliza a bloques de recuerdo.
+function normalizeBlocks(raw) {
+  const arr = Array.isArray(raw) ? raw : [];
+  return arr.map((b) => {
+    if (typeof b === 'number' && b > 0) return { type: 'memory', id: b };
+    if (b && b.type === 'story') {
+      return { type: 'story', title: String(b.title || '').slice(0, 200), text: String(b.text || '').slice(0, 5000) };
+    }
+    if (b && b.type === 'memory' && parseInt(b.id, 10) > 0) return { type: 'memory', id: parseInt(b.id, 10) };
+    return null;
+  }).filter(Boolean);
+}
+
+// Valida los bloques enviados por el formulario: los recuerdos deben existir en
+// esta familia (se conserva el orden), las historias se recortan y las vacías se descartan.
+async function cleanBlocks(familyId, rawJson) {
+  let parsed = [];
+  try { parsed = JSON.parse(rawJson || '[]'); } catch (e) { parsed = []; }
+  const blocks = normalizeBlocks(parsed);
+  const ids = blocks.filter((b) => b.type === 'memory').map((b) => b.id);
+  let ok = new Set();
+  if (ids.length) {
+    const { rows } = await db.query('SELECT id FROM memories WHERE family_id=$1 AND id = ANY($2)', [familyId, ids]);
+    ok = new Set(rows.map((r) => r.id));
+  }
+  return blocks.filter((b) => {
+    if (b.type === 'memory') return ok.has(b.id);
+    return b.title.trim() || b.text.trim();
+  });
+}
+
+function blocksMemoryIds(blocks) {
+  return blocks.filter((b) => b.type === 'memory').map((b) => b.id);
+}
+
+// Resuelve los bloques a ítems ordenados listos para la vista y el PDF.
+async function resolveItems(blocks) {
+  const ids = blocksMemoryIds(blocks);
+  const byId = new Map();
+  if (ids.length) {
+    const { rows } = await db.query('SELECT * FROM memories WHERE id = ANY($1)', [ids]);
+    for (const m of rows) byId.set(m.id, m);
+    await withPeople([...byId.values()]);
+  }
+  return blocks
+    .map((b) => (b.type === 'story'
+      ? { kind: 'story', title: b.title, text: b.text }
+      : (byId.has(b.id) ? { kind: 'memory', memory: byId.get(b.id) } : null)))
+    .filter(Boolean);
 }
 
 router.get('/', async (req, res) => {
   const { rows } = await db.query('SELECT * FROM albums WHERE family_id=$1 ORDER BY created_at DESC', [req.family.id]);
   for (const a of rows) {
-    const ids = Array.isArray(a.memory_ids) ? a.memory_ids : [];
-    a.count = ids.length;
+    a.count = blocksMemoryIds(normalizeBlocks(a.memory_ids)).length;
   }
   res.render('view-layout', {
     page: 'view-workshop', title: req.t('workshop'),
@@ -70,51 +111,56 @@ router.get('/new', canWrite, async (req, res) => {
   res.render('view-layout', {
     page: 'view-album-new', title: req.t('new_album'),
     family: req.family, membership: req.membership, memories, persons,
+    picks: memories.map((m) => ({ kind: 'memory', m, checked: false })),
     album: null, formAction: null, submitLabel: null,
   });
 });
 
 router.post('/', canWrite, async (req, res) => {
-  const ids = await cleanIds(req.family.id, req.body.memory_ids);
+  const blocks = await cleanBlocks(req.family.id, req.body.blocks);
   const title = (req.body.title || '').trim() || (req.lang === 'en' ? 'Untitled album' : 'Álbum sin título');
   const narrative = (req.body.narrative || '').trim();
   const theme = cleanTheme(req.body.theme);
-  if (!ids.length) return res.redirect(`/families/${req.family.id}/workshop/new`);
+  if (!blocks.length) return res.redirect(`/families/${req.family.id}/workshop/new`);
   const { rows: ins } = await db.query(
     'INSERT INTO albums (family_id, title, narrative, theme, memory_ids, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-    [req.family.id, title, narrative, theme, JSON.stringify(ids), req.session.user.id]
+    [req.family.id, title, narrative, theme, JSON.stringify(blocks), req.session.user.id]
   );
   req.session.flash = req.t('album_created');
   res.redirect(`/families/${req.family.id}/workshop/${ins[0].id}`);
 });
 
-// Editar álbum: mismo armador, con los recuerdos del álbum primero (en su orden) y marcados.
+// Editar álbum: mismo armador, con los bloques del álbum primero (en su orden).
 router.get('/:aid/edit', canWrite, async (req, res) => {
   const { rows: ar } = await db.query('SELECT * FROM albums WHERE id=$1 AND family_id=$2', [req.params.aid, req.family.id]);
   if (!ar.length) return res.redirect(`/families/${req.family.id}/workshop`);
   const album = ar[0];
-  const albumIds = Array.isArray(album.memory_ids) ? album.memory_ids : [];
+  const blocks = normalizeBlocks(album.memory_ids);
   const { memories, persons } = await builderData(req.family.id);
   const byId = new Map(memories.map((m) => [m.id, m]));
-  const inAlbum = albumIds.map((id) => byId.get(id)).filter(Boolean);
-  const rest = memories.filter((m) => !albumIds.includes(m.id));
+  const picks = [];
+  for (const b of blocks) {
+    if (b.type === 'story') picks.push({ kind: 'story', title: b.title, text: b.text });
+    else if (byId.has(b.id)) { const m = byId.get(b.id); m._checked = true; picks.push({ kind: 'memory', m, checked: true }); byId.delete(b.id); }
+  }
+  for (const m of byId.values()) picks.push({ kind: 'memory', m, checked: false });
   res.render('view-layout', {
     page: 'view-album-new', title: req.t('edit_album'),
     family: req.family, membership: req.membership,
-    memories: [...inAlbum, ...rest], persons, album,
+    memories, persons, album, picks,
     formAction: `/families/${req.family.id}/workshop/${album.id}`,
     submitLabel: req.t('save_changes'),
   });
 });
 
 router.post('/:aid', canWrite, async (req, res) => {
-  const ids = await cleanIds(req.family.id, req.body.memory_ids);
+  const blocks = await cleanBlocks(req.family.id, req.body.blocks);
   const title = (req.body.title || '').trim() || (req.lang === 'en' ? 'Untitled album' : 'Álbum sin título');
   const narrative = (req.body.narrative || '').trim();
   const theme = cleanTheme(req.body.theme);
-  if (!ids.length) return res.redirect(`/families/${req.family.id}/workshop/${req.params.aid}/edit`);
+  if (!blocks.length) return res.redirect(`/families/${req.family.id}/workshop/${req.params.aid}/edit`);
   await db.query('UPDATE albums SET title=$1, narrative=$2, theme=$3, memory_ids=$4 WHERE id=$5 AND family_id=$6',
-    [title, narrative, theme, JSON.stringify(ids), req.params.aid, req.family.id]);
+    [title, narrative, theme, JSON.stringify(blocks), req.params.aid, req.family.id]);
   req.session.flash = req.t('album_updated');
   res.redirect(`/families/${req.family.id}/workshop/${req.params.aid}`);
 });
@@ -125,16 +171,11 @@ router.get('/:aid', async (req, res) => {
     [req.params.aid, req.family.id]);
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const album = rows[0];
-  const ids = Array.isArray(album.memory_ids) ? album.memory_ids : [];
-  let memories = [];
-  if (ids.length) {
-    const { rows: m } = await db.query('SELECT * FROM memories WHERE id = ANY($1)', [ids]);
-    const byId = new Map(m.map((x) => [x.id, x]));
-    memories = ids.map((id) => byId.get(id)).filter(Boolean);
-  }
+  const items = await resolveItems(normalizeBlocks(album.memory_ids));
+  const memCount = items.filter((it) => it.kind === 'memory').length;
   res.render('view-layout', {
     page: 'view-album-show', title: album.title,
-    family: req.family, membership: req.membership, album, memories,
+    family: req.family, membership: req.membership, album, items, memCount,
     canWrite: ['admin', 'collaborator'].includes(req.membership.role),
   });
 });
@@ -145,15 +186,8 @@ router.get('/:aid/download', async (req, res) => {
     [req.params.aid, req.family.id]);
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const album = rows[0];
-  const ids = Array.isArray(album.memory_ids) ? album.memory_ids : [];
-  let memories = [];
-  if (ids.length) {
-    const { rows: m } = await db.query('SELECT * FROM memories WHERE id = ANY($1)', [ids]);
-    const byId = new Map(m.map((x) => [x.id, x]));
-    memories = ids.map((id) => byId.get(id)).filter(Boolean);
-    await withPeople(memories);
-  }
-  const pdf = await generateAlbumPDF({ family: req.family, album, memories, lang: req.lang });
+  const items = await resolveItems(normalizeBlocks(album.memory_ids));
+  const pdf = await generateAlbumPDF({ family: req.family, album, items, lang: req.lang });
   const fname = album.title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'album';
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${fname}.pdf"`);

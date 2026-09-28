@@ -23,6 +23,12 @@ Legado Vivo es el archivo privado de tu familia:
   Formatos aceptados: imágenes (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
   y audios (mp3, wav, m4a, aac, ogg, flac…). En la biblioteca, los recuerdos con video muestran una miniatura
   (primer cuadro) con insignia ▶; el video se reproduce en la página del recuerdo.
+  **Sin subir archivos**: el campo «Video por URL» acepta un enlace público de **YouTube o Instagram**
+  (p. ej. `https://www.youtube.com/watch?v=…` o `https://www.instagram.com/reel/…`): el servidor lo
+  descarga en segundo plano (máx. 200 MB, hasta 720p) y lo guarda como el video del recuerdo; la página
+  muestra «descargando…» o el motivo del error en tu idioma. El campo «Foto por URL» acepta el enlace
+  directo de cualquier imagen pública (o de un post de Instagram): se descarga (máx. 100 MB) y queda como
+  la foto del recuerdo. Puedes cambiar la URL después desde *Editar*.
 - **Cronología**: ordenada por la fecha del recuerdo, no por la fecha de subida.
 - **Historias**: genera texto con IA (OpenAI, opcional) citando sus fuentes, o escríbelas manualmente.
 - **Taller**: arma álbumes PDF por tema (cumpleaños, Navidad, viajes…).
@@ -33,13 +39,25 @@ Legado Vivo es el archivo privado de tu familia:
   aparece después de la portada, y elegir una *temática visual* que decora la portada
   (General, Familia, Cumpleaños, Navidad, Viaje, Boda/Aniversario).
   El PDF sale maquetado editorialmente: portada con título, autor y fecha, un recuerdo
-  por página (la imagen nunca se parte), cabecera con el título del álbum y número de
-  página. Los álbumes se guardan en la biblioteca del taller y se pueden volver a
-  **editar** (título, narrativa, temática, recuerdos y orden), descargar o eliminar.
-  Los recuerdos con video aparecen con una imagen de su primer cuadro.
+  por página (la imagen nunca se parte ni se distorsiona: conserva su proporción aunque
+  la foto vertical traiga orientación EXIF de teléfono), cabecera con el título del álbum
+  y número de página al pie, sin páginas en blanco. Los recuerdos que tengan audio muestran en el PDF
+  un botón **«Escuchar audio»** (en español o inglés, según tu idioma) que abre el audio en el navegador;
+  para que el botón funcione, la variable `APP_URL` debe contener la dirección pública de tu app en Railway.
+  Los álbumes se guardan en la
+  biblioteca del taller y se pueden volver a **editar** (título, narrativa, temática,
+  recuerdos y orden), descargar o eliminar — la descarga **regenera el PDF** desde el
+  álbum guardado, no hay que volver a armarlo.
+  Entre los recuerdos puedes intercalar **historias intermedias**: un bloque con icono
+  📖 y su propia mini-historia (título + texto), independiente de la narrativa inicial,
+  que en el PDF ocupa su propia página. Los recuerdos con video aparecen con una imagen
+  de su primer cuadro.
 - **Búsqueda**: por palabras clave, o conversacional con IA si hay clave configurada.
-- **Asistente por WhatsApp**: manda foto + relato al número del asistente y el borrador entra
-  al archivo como *pendiente de completar*.
+- **Asistente por WhatsApp**: manda foto + relato al número del asistente (+1 555-153-9713)
+  y el borrador entra al archivo como *pendiente de completar*.
+- **Ayuda en la app**: la página *Ayuda* del menú trae el manual completo en español e inglés,
+  con el número del Asistente Puente, el flujo de captura por WhatsApp, límites de formato,
+  el Taller, el PDF editorial y la solución de problemas.
 - **Bilingüe** español/inglés con selector.
 
 ### 2. Despliegue en Railway (paso a paso, como para novato)
@@ -128,6 +146,12 @@ Legado Vivo is your family's private archive:
   Accepted formats: images (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
   and audios (mp3, wav, m4a, aac, ogg, flac…). In the library, video memories show a thumbnail
   (first frame) with a ▶ badge; the video plays on the memory page.
+  **Without uploading files**: the “Video by URL” field accepts a public **YouTube or Instagram**
+  link (e.g. `https://www.youtube.com/watch?v=…` or `https://www.instagram.com/reel/…`): the server
+  downloads it in the background (max 200 MB, up to 720p) and saves it as the memory's video; the page
+  shows “downloading…” or the reason for the error in your language. The “Photo by URL” field accepts a
+  direct link to any public image (or an Instagram post): it is downloaded (max 100 MB) and saved as the
+  memory's photo. You can change the URL later from *Edit*.
 - **Timeline**: ordered by the memory's date, not the upload date.
 - **Stories**: AI-generate text (OpenAI, optional) with cited sources, or write manually.
 - **Workshop**: build themed PDF albums (birthdays, Christmas, trips…).
@@ -138,13 +162,25 @@ Legado Vivo is your family's private archive:
   after the cover page, and pick a *visual theme* that decorates the cover
   (General, Family, Birthday, Christmas, Trip, Wedding/Anniversary).
   The PDF is editorially laid out: cover with title, author and date, one memory per
-  page (images never split), album-title header and page numbers. Albums are saved in
-  the workshop library and can be **edited** again (title, narrative, theme, memories
-  and order), downloaded or deleted. Video memories appear with a still image of their
+  page (images never split or distort: they keep their aspect ratio even when a
+  portrait phone photo carries EXIF orientation), album-title header and page numbers
+  in the footer, with no blank pages. Memories that include audio show a **“Listen to audio”**
+  button in the PDF (in Spanish or English, following your language) that opens the audio in the browser;
+  for the button to work, the `APP_URL` variable must contain your app's public Railway address.
+  Albums are saved in the workshop library and can
+  be **edited** again (title, narrative, theme, memories and order), downloaded or
+  deleted — downloading **regenerates the PDF** from the saved album, no need to
+  rebuild it.
+  Between memories you can interleave **interstitial stories**: a block with a 📖 icon
+  and its own mini-story (title + text), independent from the opening narrative, which
+  gets its own page in the PDF. Video memories appear with a still image of their
   first frame.
 - **Search**: keyword search, or conversational AI search when a key is set.
-- **WhatsApp assistant**: send a photo + story to the assistant's number and the draft
-  enters the archive as *pending completion*.
+- **WhatsApp assistant**: send a photo + story to the assistant's number (+1 555-153-9713) and
+  the draft enters the archive as *pending completion*.
+- **In-app help**: the *Help* page in the menu carries the full manual in Spanish and English,
+  with the Asistente Puente number, the WhatsApp capture flow, format limits, the Workshop,
+  the editorial PDF and troubleshooting.
 - **Bilingual** Spanish/English with a language switcher.
 
 ### 2. Deploy to Railway (step by step)
@@ -233,8 +269,9 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
 | `i18n.js` / `locale-es.json` / `locale-en.json` | Bilingüe es/en |
 | `mw.js` | Auth y permisos / *Auth & permissions* |
 | `ai.js` | OpenAI opcional (historias, búsqueda) |
-| `pdfgen.js` | Álbumes PDF con pdfkit (incluye miniaturas de video) |
+| `pdfgen.js` | Álbumes PDF con pdfkit (incluye miniaturas de video y botón de audio) |
 | `video-thumb.js` | Extrae el primer cuadro del video como miniatura (ffmpeg) |
+| `media-download.js` | Descarga de video (YouTube/Instagram) y foto por URL (yt-dlp / HTTP) |
 | `routes-*.js` | Rutas: auth, familias, personas, recuerdos, historias, taller, búsqueda, puente, cuenta |
 | `view-*.ejs` | Vistas / *Views* (layout + páginas) |
 | `assets-style.css` / `assets-app.js` | Estilos y JS mínimo |
@@ -260,7 +297,8 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
-- Versión 1.1.0 — 2026-09-20.
+- Versión 1.2.0 — 2026-09-28: video por URL (YouTube/Instagram), foto por URL,
+  botón «Escuchar audio» en el PDF (migración `migration-005.sql`).
 - 2026-09-27: la subida de recuerdos (nuevo/editar) muestra **barra de progreso** con % y
   MB, y si falla muestra el **motivo** en tu idioma (archivo muy grande, tipo no permitido,
   conexión cortada). Límite de **video subido a 200 MB** (foto/audio: 100 MB).
@@ -331,3 +369,26 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   theme color and page numbers in the footer. The workshop library now lets you
   **edit** each album again (title, narrative, theme, memories and order), besides
   downloading or deleting it.*
+- 2026-09-27 (PDF: sin páginas en blanco, fotos sin distorsión, historias intermedias):
+  (1) las páginas en blanco al final las causaba el bucle de pies de página — pdfkit abre
+  una página nueva cuando el texto supera maxY(); ahora el pie se escribe reduciendo
+  temporalmente el margen inferior; (2) las fotos se dibujan con la opción `fit` de pdfkit
+  (escala uniforme) calculando el tamaño real con el intercambio ancho/alto de la
+  orientación EXIF — verificado en el PDF: matriz 483.28×302.05 para 1600×1000 y
+  285×380 para foto vertical con EXIF 6; (3) **historias intermedias**: el contenido del
+  álbum es una lista de bloques `{type:'memory',id}` / `{type:'story',title,text}`
+  (los álbumes antiguos con `[ids]` se normalizan solos); en el armador se insertan con
+  ＋📖 entre los recuerdos, se editan en línea, se reordenan y se eliminan; en la web
+  aparecen como tarjetas 📖 intercaladas y en el PDF ocupan su propia página con icono
+  de libro vectorial. La descarga regenera el PDF desde el álbum guardado.
+  / *2026-09-27 (PDF: no blank pages, no photo distortion, interstitial stories):
+  (1) the trailing blank pages were caused by the footer loop — pdfkit opens a new page
+  when text exceeds maxY(); the footer is now written with a temporarily reduced bottom
+  margin; (2) photos are drawn with pdfkit's `fit` option (uniform scaling), computing
+  the real size with the EXIF-orientation width/height swap — verified in the PDF:
+  483.28×302.05 matrix for 1600×1000 and 285×380 for a portrait EXIF-6 photo;
+  (3) **interstitial stories**: album content is a block list `{type:'memory',id}` /
+  `{type:'story',title,text}` (old `[ids]` albums normalize automatically); in the
+  builder they are inserted with +📖 between memories, edited inline, reordered and
+  deleted; on the web they appear as interleaved 📖 cards and in the PDF they get their
+  own page with a vector book icon. Downloading regenerates the PDF from the saved album.*

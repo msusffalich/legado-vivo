@@ -13,16 +13,24 @@
     <a class="btn ghost small" href="/families/<%= family.id %>/workshop"><%= t('back') %></a>
   </p>
 </div>
-<p class="muted"><%= memories.length === 1 ? t('one_memory') : t('memories_count', { n: memories.length }) %></p>
+<p class="muted"><%= memCount === 1 ? t('one_memory') : t('memories_count', { n: memCount }) %></p>
 <p class="muted small"><%= t('by_author', { name: album.author_name || '—' }) %> · <%= t('created_on', { date: fmtDate(album.created_at) }) %> · <%= t('theme_' + (album.theme || 'general')) %></p>
 <% if (album.narrative) { %><div class="card"><p style="white-space:pre-wrap"><%= album.narrative %></p></div><% } %>
 <div class="grid">
-<% memories.forEach(function(m) { %>
+<% items.forEach(function(it) {
+     if (it.kind === 'story') { %>
+  <div class="card storycard">
+    <h4><span class="storyicon">📖</span> <%= it.title || t('story_block') %></h4>
+    <% if (it.text) { %><p class="muted" style="white-space:pre-wrap"><%= it.text %></p><% } %>
+  </div>
+<%   } else {
+       const m = it.memory; %>
   <a class="card memcard" href="/families/<%= family.id %>/memories/<%= m.id %>">
     <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% }
        else if (m.video_path) { %><span class="memthumb"><video src="<%= m.video_path %>" preload="metadata" muted playsinline></video><span class="playbadge">▶</span></span><% } %>
     <h4><%= m.title %></h4>
     <p class="muted small"><%= fmtMemDate(m) %></p>
   </a>
-<% }); %>
+<%   }
+   }); %>
 </div>
