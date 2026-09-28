@@ -113,3 +113,11 @@ audio { width: 100%; }
 .storycard { border-style: dashed; background: #fffdf6; }
 .storycard .storyicon { font-size: 1.6rem; }
 .btn.tiny { padding: .15rem .45rem; font-size: .8rem; line-height: 1.2; }
+
+/* Comentario opcional de la IA en la página del recuerdo */
+.ai-comment { display: flex; gap: .7rem; align-items: flex-start; margin: 1rem 0;
+  padding: .9rem 1rem; border-radius: 10px;
+  background: linear-gradient(135deg, #f6efe2, #fbf7ee);
+  border: 1px solid #e3d3ae; }
+.ai-comment .ai-star { font-size: 1.3rem; color: #b98a2f; line-height: 1.4; }
+.ai-comment p { margin: .3rem 0 0; white-space: pre-wrap; }

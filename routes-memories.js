@@ -6,6 +6,8 @@ const fs = require('fs');
 const db = require('./db');
 const { loadFamily, canWrite } = require('./mw');
 const { ensureVideoThumb, deleteVideoThumb } = require('./video-thumb');
+const { extractDocText } = require('./doc-extract');
+const { aiEnabled, generateMemoryComment } = require('./ai');
 const { isSupportedVideoUrl, downloadVideoUrl, isSupportedImageUrl, downloadImageUrl, downloadInstagramImage } = require('./media-download');
 
 const router = express.Router({ mergeParams: true });
@@ -30,13 +32,16 @@ const VIDEO_EXT = new Set(['mp4', 'm4v', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'fl
 const AUDIO_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'flac', 'wma',
   'opus', 'aiff', 'aif', 'amr', '3ga']);
 const MEDIA_EXT = new Set([...IMAGE_EXT, ...VIDEO_EXT, ...AUDIO_EXT]);
+// Documentos adjuntos con narrativa extraída (PDF, Word, texto plano).
+const DOC_EXT = new Set(['pdf', 'docx', 'txt', 'md', 'markdown']);
+const DOC_MAX_MB = 20; // límite para documentos
 const upload = multer({
   storage,
   limits: { fileSize: VIDEO_MAX_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const mimeOk = /^(image|audio|video)\//.test(file.mimetype || '');
     const ext = path.extname(file.originalname || '').toLowerCase().replace(/^\./, '');
-    const ok = mimeOk || MEDIA_EXT.has(ext);
+    const ok = mimeOk || MEDIA_EXT.has(ext) || DOC_EXT.has(ext);
     cb(ok ? null : new Error('badtype'), ok);
   },
 });
@@ -44,6 +49,7 @@ const fields = upload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'audio', maxCount: 1 },
   { name: 'video', maxCount: 1 },
+  { name: 'document', maxCount: 1 },
 ]);
 
 function isXhr(req) {
@@ -61,12 +67,48 @@ function cleanupUploads(files) {
   }
 }
 
-// Revisa que foto/audio no pasen de 100 MB (el video ya está limitado a 200 MB por multer).
+// Procesa el documento adjunto: extrae su texto como narrativa del recuerdo.
+// Devuelve { docPath, docName, docText } o null si no se subió documento.
+async function processDocumentUpload(req) {
+  const f = req.files && req.files.document && req.files.document[0];
+  if (!f) return null;
+  const abs = path.join(UPLOAD_DIR, f.filename);
+  const r = await extractDocText(abs, f.originalname || f.filename);
+  return {
+    docPath: '/uploads/' + f.filename,
+    docName: f.originalname || f.filename,
+    docText: r.ok ? (r.text || '') : '',
+  };
+}
+
+// Genera el comentario opcional de la IA (solo si la casilla está marcada
+// y hay clave de OpenAI). Devuelve el texto o ''.
+async function maybeAiComment(req, info) {
+  if (req.body.ai_comment_gen !== '1' || !aiEnabled()) return '';
+  try {
+    const c = await generateMemoryComment(info, req.lang || 'es');
+    return c || '';
+  } catch (e) {
+    console.error('[ai-comment]', e.message);
+    return '';
+  }
+}
+
+// Borra el archivo de un documento reemplazado o eliminado.
+function deleteDocFile(docPath) {
+  if (!docPath) return;
+  try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(docPath))); } catch (e) { /* noop */ }
+}
+
+// Revisa que foto/audio no pasen de 100 MB (el video ya está limitado a 200 MB por multer)
+// y que el documento no pase de DOC_MAX_MB.
 function checkMediaSizes(req) {
   for (const name of ['photo', 'audio']) {
     const f = req.files && req.files[name] && req.files[name][0];
     if (f && f.size > MEDIA_MAX_MB * 1024 * 1024) return new Error('toobig:' + name);
   }
+  const d = req.files && req.files.document && req.files.document[0];
+  if (d && d.size > DOC_MAX_MB * 1024 * 1024) return new Error('toobig:document');
   return null;
 }
 
@@ -74,7 +116,10 @@ function checkMediaSizes(req) {
 function uploadFail(req, res, err, fallback) {
   let msg;
   if (err && err.code === 'LIMIT_FILE_SIZE') msg = req.t('upload_too_large_generic');
-  else if (err && /^toobig:/.test(err.message || '')) msg = req.t('upload_too_large', { max: MEDIA_MAX_MB });
+  else if (err && /^toobig:/.test(err.message || '')) {
+    const max = /toobig:document/.test(err.message) ? DOC_MAX_MB : MEDIA_MAX_MB;
+    msg = req.t('upload_too_large', { max });
+  }
   else if (err && err.message === 'badtype') msg = req.t('upload_bad_type');
   else msg = req.t('error_generic');
   cleanupUploads(req.files);
@@ -201,6 +246,7 @@ router.get('/new', canWrite, async (req, res) => {
   res.render('view-layout', {
     page: 'view-memory-new', title: req.t('new_memory'),
     family: req.family, membership: req.membership, persons,
+    aiEnabled: aiEnabled(),
   });
 });
 
@@ -227,16 +273,24 @@ router.post('/', canWrite, (req, res, next) => {
   const videoUrl = (b.video_url || '').trim() || null;
   const photoUrl = (b.photo_url || '').trim() || null;
   const memoryDate = (b.memory_date || '').trim() || null;
+  const doc = await processDocumentUpload(req);
+  const storyForAi = (b.story || '') + (doc && doc.docText ? '\n\n' + doc.docText.slice(0, 2000) : '');
+  const aiComment = await maybeAiComment(req, {
+    title, story: storyForAi, transcription: b.transcription || '',
+    photo_path: photo, video_path: video,
+  });
   const { rows } = await db.query(
     `INSERT INTO memories (family_id, title, story, transcription, place, memory_date, date_precision,
       photo_path, audio_path, video_path, video_url, video_dl_status,
-      photo_url, photo_dl_status, interview, status, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'complete',$16) RETURNING id`,
+      photo_url, photo_dl_status, interview, status, created_by,
+      doc_path, doc_name, doc_text, ai_comment)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'complete',$16,$17,$18,$19,$20) RETURNING id`,
     [req.family.id, title, b.story || '', b.transcription || '', (b.place || '').trim(), memoryDate,
      ['exact', 'approx'].includes(b.date_precision) ? b.date_precision : 'unknown',
      photo, audio, video, videoUrl, videoUrl && !video ? 'pending' : 'ready',
      photoUrl, photoUrl && !photo ? 'pending' : 'ready',
-     JSON.stringify(interview), req.session.user.id]
+     JSON.stringify(interview), req.session.user.id,
+     doc ? doc.docPath : null, doc ? doc.docName : null, doc ? doc.docText : '', aiComment]
   );
   const mid = rows[0].id;
   for (const pid of personIds(b)) {
@@ -288,6 +342,7 @@ router.get('/:mid/edit', canWrite, async (req, res) => {
     page: 'view-memory-edit', title: req.t('edit_memory'),
     family: req.family, membership: req.membership, memory: rows[0], persons,
     linked: linked.map((r) => r.person_id),
+    aiEnabled: aiEnabled(),
   });
 });
 
@@ -324,17 +379,36 @@ router.post('/:mid', canWrite, (req, res, next) => {
   const dlStatus = video ? 'ready' : (videoUrl && urlChanged ? 'pending' : (old.video_dl_status || 'ready'));
   const photoDlStatus = photo ? 'ready' : (photoUrl && photoUrlChanged ? 'pending' : (old.photo_dl_status || 'ready'));
   const title = (b.title || '').trim() || old.title;
+  // Documento: reemplazo, eliminación o se conserva el anterior.
+  let docPath = old.doc_path, docName = old.doc_name, docText = old.doc_text || '';
+  const newDoc = await processDocumentUpload(req);
+  if (newDoc) {
+    deleteDocFile(old.doc_path);
+    docPath = newDoc.docPath; docName = newDoc.docName; docText = newDoc.docText;
+  } else if (b.doc_remove === '1' && old.doc_path) {
+    deleteDocFile(old.doc_path);
+    docPath = null; docName = null; docText = '';
+  }
+  const storyForAi = (b.story || '') + (docText ? '\n\n' + docText.slice(0, 2000) : '');
+  const aiComment = req.body.ai_comment_gen === '1'
+    ? (await maybeAiComment(req, {
+        title, story: storyForAi, transcription: b.transcription || '',
+        photo_path: photo, video_path: video,
+      })) || (old.ai_comment || '') // si la IA falla, conserva el comentario anterior
+    : (old.ai_comment || '');
   await db.query(
     `UPDATE memories SET title=$1, story=$2, transcription=$3, place=$4, memory_date=$5, date_precision=$6,
       photo_path=$7, audio_path=$8, video_path=$9, video_url=$10, video_dl_status=$11,
       video_dl_error=CASE WHEN $11='pending' THEN NULL ELSE video_dl_error END,
       photo_url=$12, photo_dl_status=$13,
       photo_dl_error=CASE WHEN $13='pending' THEN NULL ELSE photo_dl_error END,
-      interview=$14, status=$15, updated_at=now() WHERE id=$16`,
+      interview=$14, status=$15, updated_at=now(),
+      doc_path=$17, doc_name=$18, doc_text=$19, ai_comment=$20 WHERE id=$16`,
     [title, b.story || '', b.transcription || '', (b.place || '').trim(), (b.memory_date || '').trim() || null,
      ['exact', 'approx', 'unknown'].includes(b.date_precision) ? b.date_precision : 'unknown',
      photo, audio, video, videoUrl, dlStatus, photoUrl, photoDlStatus,
-     JSON.stringify(interview), b.status === 'pending' ? 'pending' : 'complete', mid]
+     JSON.stringify(interview), b.status === 'pending' ? 'pending' : 'complete', mid,
+     docPath, docName, docText, aiComment]
   );
   await db.query('DELETE FROM memory_people WHERE memory_id=$1', [mid]);
   for (const pid of personIds(b)) {

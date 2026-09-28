@@ -39,6 +39,16 @@
     <p class="muted small"><%= t('video_source') %>: <a href="<%= memory.video_url %>" target="_blank" rel="noopener"><%= memory.video_url %></a></p>
   <% } %>
   <% if (memory.story) { %><p class="story"><%= memory.story %></p><% } %>
+  <% if (memory.doc_path) { %>
+    <h4>📄 <%= t('doc_label') %></h4>
+    <p><a class="btn ghost small" href="<%= memory.doc_path %>" target="_blank" rel="noopener">⬇ <%= t('doc_download') %>: <%= memory.doc_name || 'documento' %></a></p>
+    <% if (memory.doc_text) { %>
+      <h4><%= t('doc_narrative_label') %></h4><p class="story muted"><%= memory.doc_text %></p>
+    <% } %>
+  <% } %>
+  <% if (memory.ai_comment) { %>
+    <div class="ai-comment"><span class="ai-star">✦</span><div><strong><%= t('ai_comment_label') %></strong><p><%= memory.ai_comment %></p></div></div>
+  <% } %>
   <% if (memory.transcription) { %>
     <h4><%= t('transcription_label') %></h4><p class="story muted"><%= memory.transcription %></p><% } %>
   <% if (persons.length) { %>

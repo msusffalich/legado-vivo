@@ -14,6 +14,7 @@ router.get('/', async (req, res) => {
     const { rows: m } = await db.query(
       `SELECT * FROM memories WHERE family_id=$1 AND
        (title ILIKE $2 OR story ILIKE $2 OR transcription ILIKE $2 OR place ILIKE $2
+        OR doc_text ILIKE $2 OR doc_name ILIKE $2 OR ai_comment ILIKE $2
         OR EXISTS (SELECT 1 FROM memory_people mp JOIN persons p ON p.id = mp.person_id
                    WHERE mp.memory_id = memories.id AND p.name ILIKE $2))
        ORDER BY created_at DESC LIMIT 50`, [req.family.id, like]);

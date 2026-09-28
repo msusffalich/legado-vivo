@@ -88,12 +88,69 @@ function generateAlbumPDF({ family, album, items, lang }) {
         pg.height - 38,
         { width: pg.width - pg.margins.left - pg.margins.right, align: 'center' }
       );
+      // Rombito temático sobre el número de página
+      const dcx = pg.width / 2, dcy = pg.height - 50, ds = 2.6;
+      doc.save();
+      doc.fillColor(theme.accent).opacity(0.7);
+      doc.polygon([dcx, dcy - ds], [dcx + ds, dcy], [dcx, dcy + ds], [dcx - ds, dcy]).fill();
+      doc.restore();
       pg.margins.bottom = oldBottom;
     }
 
     doc.end();
     return done;
   })();
+}
+
+// ---- Decoración temática de páginas interiores ----
+// Banda superior en el color de la temática (posición fija: no mueve el cursor
+// ni abre páginas nuevas).
+function drawTopBand(doc, theme) {
+  const pg = doc.page;
+  doc.save();
+  doc.fillColor(theme.accent).opacity(0.9).rect(0, 0, pg.width, 7).fill();
+  doc.restore();
+}
+
+// Pequeños rombos en las cuatro esquinas, tenue.
+function drawCornerMarks(doc, theme) {
+  const pg = doc.page;
+  const m = 22, s = 3.2;
+  doc.save();
+  doc.fillColor(theme.accent).opacity(0.35);
+  for (const [x, y] of [[m, m + 4], [pg.width - m, m + 4], [m, pg.height - m], [pg.width - m, pg.height - m]]) {
+    doc.polygon([x, y - s], [x + s, y], [x, y + s], [x - s, y]).fill();
+  }
+  doc.restore();
+}
+
+// Filete ornamental centrado bajo el título: dos reglas + rombo.
+function drawDivider(doc, theme) {
+  const pg = doc.page;
+  const cx = pg.width / 2;
+  const y = doc.y + 2;
+  const half = 64, s = 4;
+  doc.save();
+  doc.strokeColor(theme.accent).lineWidth(0.75).opacity(0.85);
+  doc.moveTo(cx - half, y).lineTo(cx - 12, y).stroke();
+  doc.moveTo(cx + 12, y).lineTo(cx + half, y).stroke();
+  doc.fillColor(theme.accent).opacity(1);
+  doc.polygon([cx, y - s], [cx + s, y], [cx, y + s], [cx - s, y]).fill();
+  doc.restore();
+  doc.y = y + 6;
+  doc.moveDown(0.5);
+}
+
+// Primer párrafo con inicial grande en el color de la temática.
+// Aproximación editorial con pdfkit (inicial en la primera línea).
+function drawDropCapParagraph(doc, text, theme, size) {
+  const str = String(text || '');
+  if (!str) return;
+  const first = str[0];
+  const rest = str.slice(1);
+  doc.fontSize(24).fillColor(theme.accent).text(first, { continued: true });
+  doc.fontSize(size).fillColor(INK).text(rest, { align: 'justify', lineGap: 4 });
+  doc.moveDown(0.5);
 }
 
 // ---- Portada: título, autor, fecha y decorado según la temática ----
@@ -189,21 +246,26 @@ function starPoints(cx, cy, rOuter, rInner, points = 5) {
 // ---- Página de narrativa ----
 function drawNarrative(doc, { narrative, lang, theme }) {
   doc.addPage();
+  drawTopBand(doc, theme);
+  drawCornerMarks(doc, theme);
   doc.fontSize(20).fillColor(theme.deep).text(t(lang, 'album_narrative_title'));
   doc.moveDown(0.4);
   const rw = 48;
   doc.strokeColor(theme.accent).lineWidth(1.5).moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + rw, doc.y).stroke();
   doc.moveDown(0.8);
-  for (const p of paragraphs(narrative)) {
-    doc.fontSize(12).fillColor(INK).text(p, { align: 'justify', lineGap: 5 });
-    doc.moveDown(0.6);
-  }
+  const paras = paragraphs(narrative);
+  paras.forEach((p, i) => {
+    if (i === 0) drawDropCapParagraph(doc, p, theme, 12);
+    else { doc.fontSize(12).fillColor(INK).text(p, { align: 'justify', lineGap: 5 }); doc.moveDown(0.6); }
+  });
 }
 
 // ---- Historia intermedia: icono + mini-historia propia, en página aparte ----
 function drawStoryBlock(doc, { title, text, albumTitle, lang, theme }) {
   doc.addPage();
   const pg = doc.page;
+  drawTopBand(doc, theme);
+  drawCornerMarks(doc, theme);
 
   // Cabecera editorial
   doc.fontSize(9).fillColor(FAINT).text(truncate(albumTitle, 70), { align: 'right' });
@@ -238,16 +300,19 @@ function drawStoryBlock(doc, { title, text, albumTitle, lang, theme }) {
   const rw = 48, rx = (pg.width - rw) / 2;
   doc.strokeColor(theme.accent).lineWidth(1.5).moveTo(rx, doc.y).lineTo(rx + rw, doc.y).stroke();
   doc.moveDown(0.8);
-  for (const p of paragraphs(text)) {
-    doc.fontSize(11.5).fillColor(INK).text(p, { align: 'justify', lineGap: 4 });
-    doc.moveDown(0.5);
-  }
+  const sparas = paragraphs(text);
+  sparas.forEach((p, i) => {
+    if (i === 0) drawDropCapParagraph(doc, p, theme, 11.5);
+    else { doc.fontSize(11.5).fillColor(INK).text(p, { align: 'justify', lineGap: 4 }); doc.moveDown(0.5); }
+  });
 }
 
 // ---- Página de un recuerdo: imagen arriba, texto debajo, nada se parte ----
 async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
   doc.addPage();
   const pg = doc.page;
+  drawTopBand(doc, theme);
+  drawCornerMarks(doc, theme);
   const maxW = pg.width - pg.margins.left - pg.margins.right;
 
   // Cabecera editorial: título del álbum + filete en el color de la temática
@@ -260,7 +325,7 @@ async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
   // Imagen (foto o primer cuadro del video): va primera para que nunca quede
   // huérfana ni partida entre páginas.
   const img = await resolveImage(m);
-  if (img) placeImageFit(doc, img, maxW, 380);
+  if (img) placeImageFit(doc, img, maxW, 380, theme);
   else if (m.video_path) drawVideoPlaceholder(doc, maxW, Math.min(300, maxW * 9 / 16));
 
   // Kicker, título y datos
@@ -268,7 +333,7 @@ async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
     .text(t(lang, 'memory_of', { n: idx + 1, total }).toUpperCase(), { characterSpacing: 1.5 });
   doc.moveDown(0.3);
   doc.fontSize(20).fillColor(INK).text(m.title || '—');
-  doc.moveDown(0.3);
+  drawDivider(doc, theme);
   const meta = [fmtDate(m, lang), m.place].filter(Boolean).join(' · ');
   doc.fontSize(11).fillColor(MUTED).text(meta);
   if (m.people_names) doc.text(`${t(lang, 'people_label')}: ${m.people_names}`);
@@ -278,11 +343,12 @@ async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
   // idioma del usuario. Requiere APP_URL configurada en el servidor.
   drawAudioButton(doc, { m, lang, theme });
 
-  // Relato por párrafos justificados
-  for (const p of paragraphs(m.story)) {
-    doc.fontSize(11.5).fillColor(INK).text(p, { align: 'justify', lineGap: 4 });
-    doc.moveDown(0.5);
-  }
+  // Relato por párrafos justificados, con inicial decorada en el primero
+  const sparas = paragraphs(m.story);
+  sparas.forEach((p, i) => {
+    if (i === 0) drawDropCapParagraph(doc, p, theme, 11.5);
+    else { doc.fontSize(11.5).fillColor(INK).text(p, { align: 'justify', lineGap: 4 }); doc.moveDown(0.5); }
+  });
 
   // Transcripción en bloque diferenciado
   if (m.transcription) {
@@ -294,6 +360,74 @@ async function drawMemory(doc, { m, idx, total, albumTitle, lang, theme }) {
       doc.moveDown(0.4);
     }
   }
+
+  // Documento adjunto: tarjeta con icono vectorial + narrativa extraída
+  drawDocumentBlock(doc, { m, lang, theme });
+
+  // Comentario opcional de la IA como nota de cierre
+  drawAiComment(doc, { m, lang, theme });
+}
+
+// Tarjeta del documento adjunto: icono vectorial (las fuentes base no traen 📄),
+// nombre del archivo y su narrativa extraída por párrafos.
+function drawDocumentBlock(doc, { m, lang, theme }) {
+  if (!m.doc_path) return;
+  const pg = doc.page;
+  const maxW = pg.width - pg.margins.left - pg.margins.right;
+  doc.moveDown(0.4);
+  const bottom = pg.height - pg.margins.bottom;
+  if (doc.y + 90 > bottom) doc.addPage();
+  const x = pg.margins.left, y = doc.y, w = maxW, h = 46;
+  doc.save();
+  doc.fillColor(theme.soft).roundedRect(x, y, w, h, 8).fill();
+  doc.strokeColor(theme.accent).lineWidth(0.75).roundedRect(x, y, w, h, 8).stroke();
+  // Icono: hoja con esquina doblada
+  const ix = x + 16, iy = y + 9, iw = 20, ih = 28, f = 7;
+  doc.fillColor(theme.accent);
+  doc.polygon([ix, iy], [ix + iw - f, iy], [ix + iw, iy + f], [ix + iw, iy + ih], [ix, iy + ih]).fill();
+  doc.fillColor(theme.soft);
+  doc.polygon([ix + iw - f, iy], [ix + iw, iy + f], [ix + iw - f, iy + f]).fill();
+  doc.fillColor('#ffffff');
+  for (let k = 0; k < 3; k++) doc.rect(ix + 5, iy + 9 + k * 6, iw - 10, 1.6).fill();
+  doc.restore();
+  doc.fillColor(INK).fontSize(11)
+    .text(t(lang, 'doc_label') + ': ' + (m.doc_name || 'documento'), ix + 30, y + 15, { width: w - 60 });
+  doc.y = y + h;
+  doc.moveDown(0.6);
+  if (m.doc_text) {
+    doc.fontSize(10).fillColor(MUTED).text(t(lang, 'doc_narrative_label').toUpperCase(), { characterSpacing: 1 });
+    doc.moveDown(0.3);
+    for (const p of paragraphs(m.doc_text)) {
+      doc.fontSize(10.5).fillColor('#4a4038').text(p, { align: 'justify', lineGap: 3 });
+      doc.moveDown(0.4);
+    }
+  }
+}
+
+// Comentario de la IA: tarjeta con barra lateral en el color de la temática.
+function drawAiComment(doc, { m, lang, theme }) {
+  if (!m.ai_comment) return;
+  const pg = doc.page;
+  const maxW = pg.width - pg.margins.left - pg.margins.right;
+  doc.moveDown(0.4);
+  doc.fontSize(10.5);
+  const textH = doc.heightOfString(m.ai_comment, { width: maxW - 56 });
+  const h = 30 + textH + 22;
+  const bottom = pg.height - pg.margins.bottom;
+  if (doc.y + h > bottom) doc.addPage();
+  const x = pg.margins.left, y = doc.y;
+  doc.save();
+  doc.fillColor(theme.soft).roundedRect(x, y, maxW, h, 8).fill();
+  doc.strokeColor(theme.accent).lineWidth(0.75).roundedRect(x, y, maxW, h, 8).stroke();
+  doc.fillColor(theme.accent).roundedRect(x, y, 6, h, 3).fill();
+  // Estrella vectorial (las fuentes base no traen ✦)
+  const sx = x + 22, sy = y + 22, r1 = 7, r2 = 2.8;
+  doc.polygon(...starPoints(sx, sy, r1, r2, 4)).fill();
+  doc.restore();
+  doc.fillColor(theme.deep).fontSize(10).text(t(lang, 'ai_comment_label'), x + 36, y + 13);
+  doc.fillColor(INK).fontSize(10.5).text(m.ai_comment, x + 36, y + 30, { width: maxW - 56 });
+  doc.y = y + h;
+  doc.moveDown(0.8);
 }
 
 // Botón "Escuchar audio": rectángulo con el color de la temática y texto blanco,
@@ -342,7 +476,7 @@ async function resolveImage(m) {
 // que lo hace pdfkit, incluyendo el intercambio de ancho/alto que exige la
 // orientación EXIF (las fotos verticales de teléfono suelen traerla).
 // Después de image() se AVANZA el cursor (pdfkit no lo mueve solo).
-function placeImageFit(doc, absPath, maxW, maxH) {
+function placeImageFit(doc, absPath, maxW, maxH, theme) {
   const img = doc.openImage(absPath);
   let iw = img.width, ih = img.height;
   if (img.orientation > 4) { const tmp = iw; iw = ih; ih = tmp; }
@@ -354,6 +488,9 @@ function placeImageFit(doc, absPath, maxW, maxH) {
   const x = (doc.page.width - w) / 2;
   const y0 = doc.y;
   doc.image(img, x, y0, { fit: [maxW, maxH] });
+  // Doble marco: exterior en el color de la temática, interior tenue.
+  const accent = (theme && theme.accent) || RULE;
+  doc.strokeColor(accent).lineWidth(1.2).rect(x - 4, y0 - 4, w + 8, h + 8).stroke();
   doc.strokeColor(RULE).lineWidth(0.5).rect(x, y0, w, h).stroke();
   doc.y = y0 + h;
   doc.moveDown(0.8);

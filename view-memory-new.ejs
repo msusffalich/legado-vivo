@@ -15,6 +15,12 @@
   <label><%= t('video_url_label') %> <span class="muted">(<%= t('optional') %>)</span>
     <input type="url" name="video_url" inputmode="url" placeholder="https://www.youtube.com/watch?v=… / https://www.instagram.com/reel/…">
     <span class="muted small"><%= t('video_url_hint') %></span></label>
+  <label><%= t('doc_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="document" accept=".pdf,.docx,.txt,.md">
+    <span class="muted small"><%= t('doc_hint') %></span></label>
+  <% if (typeof aiEnabled !== 'undefined' && aiEnabled) { %>
+  <label class="check"><input type="checkbox" name="ai_comment_gen" value="1"> <strong><%= t('ai_comment_generate') %></strong>
+    <span class="muted small"><%= t('ai_comment_hint') %></span></label>
+  <% } %>
 
   <label><%= t('transcription_label') %> <span class="muted">(<%= t('optional') %>)</span>
     <textarea name="transcription" rows="3" placeholder="<%= t('transcription_hint') %>"></textarea></label>

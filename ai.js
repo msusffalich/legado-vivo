@@ -63,4 +63,28 @@ function aiEnabled() {
   return !!process.env.OPENAI_API_KEY;
 }
 
-module.exports = { generateStory, conversationalSearch, aiEnabled };
+// Comentario individual opcional de un recuerdo: cálido y breve (2-3 frases),
+// basado SOLO en el título y la narrativa. No inventa hechos.
+async function generateMemoryComment(m, lang) {
+  const hasMedia = m.photo_path || m.video_path
+    ? (lang === 'en'
+        ? 'It includes a photo or video.'
+        : 'Incluye una foto o un video.')
+    : '';
+  const sys = lang === 'en'
+    ? 'You write a short, warm comment (2-3 sentences) about a family memory, based ONLY on its title and narrative below. Do not invent names, dates, places or facts that are not present. Reply in English.'
+    : 'Escribes un comentario corto y cálido (2-3 frases) sobre un recuerdo familiar, basado SOLO en su título y narrativa de abajo. No inventes nombres, fechas, lugares ni hechos que no aparezcan. Responde en español neutro.';
+  const user = [
+    m.title ? 'Título: ' + m.title : '',
+    m.story ? 'Relato: ' + m.story : '',
+    m.transcription ? 'Transcripción: ' + m.transcription : '',
+    hasMedia,
+  ].filter(Boolean).join('\n');
+  if (!user.trim()) return null;
+  return chatCompletion([
+    { role: 'system', content: sys },
+    { role: 'user', content: user },
+  ]);
+}
+
+module.exports = { generateStory, conversationalSearch, aiEnabled, generateMemoryComment };

@@ -23,6 +23,11 @@ Legado Vivo es el archivo privado de tu familia:
   Formatos aceptados: imágenes (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
   y audios (mp3, wav, m4a, aac, ogg, flac…). En la biblioteca, los recuerdos con video muestran una miniatura
   (primer cuadro) con insignia ▶; el video se reproduce en la página del recuerdo.
+  **Documentos**: adjunta un PDF, Word (.docx) o texto (.txt, .md) (máx. 20 MB): el archivo original queda
+  disponible para descargar y su contenido se extrae como narrativa del recuerdo (y queda buscable en la
+  búsqueda por palabras). **Comentario de la IA** (opcional, requiere clave de OpenAI en el servidor):
+  la casilla «Generar comentario con IA» produce un comentario cálido y breve a partir del título y la narrativa;
+  se puede regenerar al editar el recuerdo.
   **Sin subir archivos**: el campo «Video por URL» acepta un enlace público de **YouTube o Instagram**
   (p. ej. `https://www.youtube.com/watch?v=…` o `https://www.instagram.com/reel/…`): el servidor lo
   descarga en segundo plano (máx. 200 MB, hasta 720p) y lo guarda como el video del recuerdo; la página
@@ -44,6 +49,9 @@ Legado Vivo es el archivo privado de tu familia:
   y número de página al pie, sin páginas en blanco. Los recuerdos que tengan audio muestran en el PDF
   un botón **«Escuchar audio»** (en español o inglés, según tu idioma) que abre el audio en el navegador;
   para que el botón funcione, la variable `APP_URL` debe contener la dirección pública de tu app en Railway.
+  La decoración temática llega a cada página (banda superior, filetes y rombos en el color de la temática,
+  inicial decorada al inicio del relato, marco doble en las fotos); los documentos muestran una tarjeta con su
+  nombre y la narrativa extraída, y el comentario de la IA aparece como nota de cierre.
   Los álbumes se guardan en la
   biblioteca del taller y se pueden volver a **editar** (título, narrativa, temática,
   recuerdos y orden), descargar o eliminar — la descarga **regenera el PDF** desde el
@@ -146,6 +154,10 @@ Legado Vivo is your family's private archive:
   Accepted formats: images (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
   and audios (mp3, wav, m4a, aac, ogg, flac…). In the library, video memories show a thumbnail
   (first frame) with a ▶ badge; the video plays on the memory page.
+  **Documents**: attach a PDF, Word (.docx) or text (.txt, .md) file (max 20 MB): the original file stays
+  available for download and its content is extracted as the memory's narrative (and becomes searchable
+  with keyword search). **AI comment** (optional, needs an OpenAI key on the server): the “Generate AI comment”
+  checkbox produces a short, warm comment from the title and narrative; it can be regenerated when editing the memory.
   **Without uploading files**: the “Video by URL” field accepts a public **YouTube or Instagram**
   link (e.g. `https://www.youtube.com/watch?v=…` or `https://www.instagram.com/reel/…`): the server
   downloads it in the background (max 200 MB, up to 720p) and saves it as the memory's video; the page
@@ -167,6 +179,9 @@ Legado Vivo is your family's private archive:
   in the footer, with no blank pages. Memories that include audio show a **“Listen to audio”**
   button in the PDF (in Spanish or English, following your language) that opens the audio in the browser;
   for the button to work, the `APP_URL` variable must contain your app's public Railway address.
+  The theme decoration reaches every page (top band, rules and diamonds in the theme color, drop initial,
+  double frame on photos); documents show a card with their name and the extracted narrative, and the AI comment
+  appears as a closing note.
   Albums are saved in the workshop library and can
   be **edited** again (title, narrative, theme, memories and order), downloaded or
   deleted — downloading **regenerates the PDF** from the saved album, no need to
@@ -269,9 +284,11 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
 | `i18n.js` / `locale-es.json` / `locale-en.json` | Bilingüe es/en |
 | `mw.js` | Auth y permisos / *Auth & permissions* |
 | `ai.js` | OpenAI opcional (historias, búsqueda) |
-| `pdfgen.js` | Álbumes PDF con pdfkit (incluye miniaturas de video y botón de audio) |
+| `pdfgen.js` | Álbumes PDF con pdfkit (miniaturas de video, botón de audio, decoración temática, tarjetas de documento e IA) |
 | `video-thumb.js` | Extrae el primer cuadro del video como miniatura (ffmpeg) |
 | `media-download.js` | Descarga de video (YouTube/Instagram) y foto por URL (yt-dlp / HTTP) |
+| `doc-extract.js` | Extrae narrativa de documentos: PDF (pdf-parse), Word (.docx, mammoth), texto |
+| `ai.js` | Búsqueda conversacional, generación de historias y comentarios cálidos de IA |
 | `routes-*.js` | Rutas: auth, familias, personas, recuerdos, historias, taller, búsqueda, puente, cuenta |
 | `view-*.ejs` | Vistas / *Views* (layout + páginas) |
 | `assets-style.css` / `assets-app.js` | Estilos y JS mínimo |
@@ -298,6 +315,14 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
+- Versión 1.3.0 — 2026-09-28: **documentos adjuntos** (PDF/Word/texto, máx. 20 MB, narrativa extraída y buscable),
+  **comentarios de IA opcionales** por recuerdo (requieren OpenAI), decoración temática extendida del PDF
+  (banda superior, inicial decorada, marco doble, tarjetas de documento e IA), auditoría de 0 páginas en blanco
+  (migración `migration-006.sql`; dependencias `pdf-parse`, `mammoth`). /
+  *Version 1.3.0 — 2026-09-28: **document attachments** (PDF/Word/text, max 20 MB, extracted searchable narrative),
+  **optional AI comments** per memory (need OpenAI), extended theme decoration of the PDF
+  (top band, drop initial, double frame, document and AI cards), zero-blank-pages audit
+  (migration `migration-006.sql`; `pdf-parse`, `mammoth` dependencies).*
 - Versión 1.2.1 — 2026-09-28: `nixpacks.toml` (Python 3 en Railway para yt-dlp).
 - Versión 1.2.0 — 2026-09-28: video por URL (YouTube/Instagram), foto por URL,
   botón «Escuchar audio» en el PDF (migración `migration-005.sql`).

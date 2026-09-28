@@ -19,6 +19,15 @@
     <span class="muted small"><%= t('video_url_hint') %></span>
     <% if (memory.video_url && memory.video_dl_status === 'pending') { %><span class="muted small">⏳ <%= t('video_downloading') %></span><% } %>
     <% if (memory.video_url && memory.video_dl_status === 'error') { %><span class="err small">⚠️ <%= t('video_dl_failed') %><% if (memory.video_dl_error) { %>: <%= memory.video_dl_error %><% } %></span><% } %></label>
+  <label><%= t('doc_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="document" accept=".pdf,.docx,.txt,.md">
+    <span class="muted small"><%= t('doc_hint') %></span>
+    <% if (memory.doc_path) { %><span class="muted small"><%= t('doc_download') %>: <a href="<%= memory.doc_path %>" target="_blank"><%= memory.doc_name || 'documento' %></a>
+      <label class="check"><input type="checkbox" name="doc_remove" value="1"> <%= t('doc_remove') %></label></span><% } %></label>
+  <% if (typeof aiEnabled !== 'undefined' && aiEnabled) { %>
+  <label class="check"><input type="checkbox" name="ai_comment_gen" value="1"> <strong><%= t('ai_comment_regenerate') %></strong>
+    <span class="muted small"><%= t('ai_comment_hint') %></span></label>
+  <% if (memory.ai_comment) { %><p class="muted small">✦ <%= memory.ai_comment %></p><% } %>
+  <% } %>
   <label><%= t('transcription_label') %><textarea name="transcription" rows="3"><%= memory.transcription %></textarea></label>
   <label><%= t('story_label') %><textarea id="story" name="story" rows="6"><%= memory.story %></textarea></label>
   <details class="interview">
