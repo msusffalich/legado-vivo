@@ -276,6 +276,7 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
 | `view-*.ejs` | Vistas / *Views* (layout + páginas) |
 | `assets-style.css` / `assets-app.js` | Estilos y JS mínimo |
 | `Procfile` / `railway.json` | Despliegue / *Deploy* |
+| `nixpacks.toml` | Agrega Python 3 a la imagen de Railway (yt-dlp lo necesita para descargar videos/fotos por URL) |
 
 ## Notas / Notes
 
@@ -297,8 +298,11 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
+- Versión 1.2.1 — 2026-09-28: `nixpacks.toml` (Python 3 en Railway para yt-dlp).
 - Versión 1.2.0 — 2026-09-28: video por URL (YouTube/Instagram), foto por URL,
   botón «Escuchar audio» en el PDF (migración `migration-005.sql`).
+- Nota: los enlaces de *stories* de Instagram exigen inicio de sesión y no se pueden
+  descargar; usa videos públicos de YouTube o posts/reels públicos de Instagram.
 - 2026-09-27: la subida de recuerdos (nuevo/editar) muestra **barra de progreso** con % y
   MB, y si falla muestra el **motivo** en tu idioma (archivo muy grande, tipo no permitido,
   conexión cortada). Límite de **video subido a 200 MB** (foto/audio: 100 MB).

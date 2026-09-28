@@ -1,0 +1,10 @@
+# Agrega Python 3 a la imagen de Railway.
+# yt-dlp (descarga de videos/fotos por URL) es un script de Python y lo necesita
+# en tiempo de ejecución, no solo en el build.
+#
+# IMPORTANTE: declarar [phases.setup] REEMPLAZA la lista de paquetes que
+# Nixpacks autodetecta para Node; por eso se repiten nodejs_24 y npm-9_x
+# (los que salen en el plan de build). Las fases install (npm ci) y start
+# (node server.js) se mantienen del proveedor.
+[phases.setup]
+nixPkgs = ["nodejs_24", "npm-9_x", "python3"]
