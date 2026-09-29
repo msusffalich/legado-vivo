@@ -1,0 +1,51 @@
+LEEME — Parche de idioma v1.3.3 (2026-09-29) / Language patch v1.3.3
+================================================================
+
+ESPAÑOL
+-------
+Este ZIP contiene SOLO los archivos modificados del parche v1.3.3
+(3 correcciones de idioma en la ayuda/textos de la app):
+
+1. view-memory-edit.ejs — la etiqueta "Actual:" del video actual en
+   *Editar recuerdo* ahora usa t('current') y respeta el idioma
+   seleccionado (antes estaba hardcodeada en español).
+2. locale-en.json — agregada la clave faltante "invite_used": "Used"
+   (nueva clave "current": "Current" en inglés).
+3. locale-es.json — nueva clave "current": "Actual".
+4. view-invites.ejs — el <textarea id="wamsg"> ahora lleva
+   data-copied con el texto traducido, y el aviso de "mensaje copiado"
+   sale en tu idioma (assets-app.js ya lo soportaba, no cambió).
+5. README.md — nota de versión v1.3.3 (ES+EN).
+
+INSTALACIÓN:
+1. En GitHub, repo de Legado Vivo: Add file → Upload files.
+2. Sube estos archivos tal cual (planos en la raíz), SOBRESCRIBIENDO
+   los existentes cuando GitHub lo indique.
+3. Commit.
+4. En Railway: servicio → Manual Deploy → Deploy latest commit.
+5. No requiere variables nuevas ni migraciones.
+
+ENGLISH
+-------
+This ZIP contains ONLY the files changed in patch v1.3.3
+(3 language fixes in the app's help/texts):
+
+1. view-memory-edit.ejs — the current-video "Actual:" label in
+   *Edit memory* now uses t('current') and follows the selected
+   language (it was hardcoded in Spanish).
+2. locale-en.json — added the missing "invite_used": "Used" key
+   (new "current": "Current" key in English).
+3. locale-es.json — new "current": "Actual" key.
+4. view-invites.ejs — the <textarea id="wamsg"> now carries a
+   translated data-copied attribute, so the "message copied" notice
+   shows in your language (assets-app.js already supported it,
+   unchanged).
+5. README.md — v1.3.3 version note (ES+EN).
+
+INSTALL:
+1. In GitHub, your Legado Vivo repo: Add file → Upload files.
+2. Upload these files as-is (flat at the root), OVERWRITING the
+   existing ones when GitHub prompts.
+3. Commit.
+4. In Railway: service → Manual Deploy → Deploy latest commit.
+5. No new variables or migrations required.

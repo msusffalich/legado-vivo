@@ -13,7 +13,7 @@
     <% if (memory.photo_url && memory.photo_dl_status === 'pending') { %><span class="muted small">⏳ <%= t('photo_downloading') %></span><% } %>
     <% if (memory.photo_url && memory.photo_dl_status === 'error') { %><span class="err small">⚠️ <%= t('photo_dl_failed') %><% if (memory.photo_dl_error) { %>: <%= memory.photo_dl_error %><% } %></span><% } %></label>
   <label><%= t('video_label') %> <span class="muted">(<%= t('optional') %> · <%= t('video_max_hint') %>)</span><input type="file" name="video" accept="video/*">
-    <% if (memory.video_path) { %><span class="muted small">Actual: <a href="<%= memory.video_path %>" target="_blank"><%= t('view') %></a></span><% } %></label>
+    <% if (memory.video_path) { %><span class="muted small"><%= t('current') %>: <a href="<%= memory.video_path %>" target="_blank"><%= t('view') %></a></span><% } %></label>
   <label><%= t('video_url_label') %> <span class="muted">(<%= t('optional') %>)</span>
     <input type="url" name="video_url" inputmode="url" placeholder="https://www.youtube.com/watch?v=… / https://www.instagram.com/reel/…" value="<%= memory.video_url || '' %>">
     <span class="muted small"><%= t('video_url_hint') %></span>

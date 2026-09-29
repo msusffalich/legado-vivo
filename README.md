@@ -319,6 +319,14 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
+- Versión 1.3.3 — 2026-09-29: tres correcciones de idioma — (1) en *Editar recuerdo*, la etiqueta
+  "Actual:" del video actual ahora respeta el idioma seleccionado (nueva clave `current`: "Actual"/"Current");
+  (2) agregada la clave faltante `invite_used` en inglés ("Used"); (3) el aviso de "mensaje copiado" en
+  *Invitaciones* ahora muestra el texto en tu idioma en vez de "¡Copiado! / Copied!" mezclado. /
+  *Version 1.3.3 — 2026-09-29: three language fixes — (1) in Edit memory, the current-video "Actual:" label
+  now follows the selected language (new `current` key: "Actual"/"Current"); (2) added the missing
+  `invite_used` key in English ("Used"); (3) the "message copied" notice in Invitations now shows in your
+  language instead of the mixed "¡Copiado! / Copied!".*
 - Versión 1.3.1 — 2026-09-28: los **emojis** de WhatsApp se retiran del PDF del Taller (las fuentes del PDF
   no los soportan y salían como símbolos extraños; la web los conserva), los comentarios de IA se generan
   **sin emojis** y se corrigió el contador «RECUERDO n DE m» del PDF (mostraba n+1). /
