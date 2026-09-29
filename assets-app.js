@@ -23,3 +23,49 @@ function addInterview() {
   story.value = (story.value.trim() ? story.value.trim() + '\n\n' : '') + block + '\n';
   story.focus();
 }
+
+// Pegado directo (Ctrl+V / Cmd+V) de archivos en el formulario de recuerdos.
+// Solo actúa cuando el portapapeles trae archivos; el pegado de texto no se toca.
+(function () {
+  function init() {
+    var form = document.getElementById('memory-form');
+    if (!form) return;
+    function field(name) { return form.querySelector('input[type="file"][name="' + name + '"]'); }
+    var targets = { photo: field('photo'), video: field('video'), audio: field('audio'), document: field('document') };
+    function pickTarget(f) {
+      var type = f.type || '', name = f.name || '';
+      if (/^image\//.test(type)) return targets.photo;
+      if (/^video\//.test(type)) return targets.video;
+      if (/^audio\//.test(type)) return targets.audio;
+      if (/pdf/i.test(type) || /word|officedocument/i.test(type) || /^text\//.test(type) || /\.(pdf|docx|txt|md)$/i.test(name)) return targets.document;
+      return null;
+    }
+    function note(input, label) {
+      var old = input.parentNode.querySelector('.paste-note');
+      if (old) old.remove();
+      var s = document.createElement('span');
+      s.className = 'muted small paste-note';
+      s.textContent = '✓ ' + label;
+      input.parentNode.appendChild(s);
+      setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 4000);
+    }
+    document.addEventListener('paste', function (e) {
+      var cd = e.clipboardData;
+      if (!cd || !cd.files || !cd.files.length) return;
+      var handled = false;
+      for (var i = 0; i < cd.files.length; i++) {
+        var t = pickTarget(cd.files[i]);
+        if (t) {
+          var dt = new DataTransfer();
+          dt.items.add(cd.files[i]);
+          t.files = dt.files;
+          note(t, cd.files[i].name || cd.files[i].type);
+          handled = true;
+        }
+      }
+      if (handled) e.preventDefault();
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();

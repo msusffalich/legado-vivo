@@ -34,6 +34,8 @@ Legado Vivo es el archivo privado de tu familia:
   muestra «descargando…» o el motivo del error en tu idioma. El campo «Foto por URL» acepta el enlace
   directo de cualquier imagen pública (o de un post de Instagram): se descarga (máx. 100 MB) y queda como
   la foto del recuerdo. Puedes cambiar la URL después desde *Editar*.
+  **Pegado directo**: también puedes pegar (Ctrl+V o ⌘V) una imagen, un video, un audio o un documento
+  copiado: se coloca solo en su casilla del formulario (un archivo por tipo).
 - **Cronología**: ordenada por la fecha del recuerdo, no por la fecha de subida.
 - **Historias**: genera texto con IA (OpenAI, opcional) citando sus fuentes, o escríbelas manualmente.
 - **Taller**: arma álbumes PDF por tema (cumpleaños, Navidad, viajes…).
@@ -164,6 +166,8 @@ Legado Vivo is your family's private archive:
   shows “downloading…” or the reason for the error in your language. The “Photo by URL” field accepts a
   direct link to any public image (or an Instagram post): it is downloaded (max 100 MB) and saved as the
   memory's photo. You can change the URL later from *Edit*.
+  **Direct paste**: you can also paste (Ctrl+V or ⌘V) a copied image, video, audio or document:
+  it lands in its own form field (one file per type).
 - **Timeline**: ordered by the memory's date, not the upload date.
 - **Stories**: AI-generate text (OpenAI, optional) with cited sources, or write manually.
 - **Workshop**: build themed PDF albums (birthdays, Christmas, trips…).
