@@ -1,7 +1,9 @@
 <%- include('view-inc-familytabs', { tab: 'workshop' }) %>
 <h1><%= album ? t('edit_album') : t('new_album') %></h1>
 <div class="card">
-<form method="post" action="<%= formAction || ('/families/' + family.id + '/workshop') %>" id="albumForm">
+<form method="post" action="<%= formAction || ('/families/' + family.id + '/workshop') %>" id="albumForm"
+  data-draft-user="<%= user.id %>"
+  data-messages="<%= JSON.stringify({ titlePh: t('story_title_ph'), textPh: t('story_text_ph'), up: t('move_up'), down: t('move_down'), del: t('delete'), empty: lang === 'en' ? 'Select at least one memory or add a story.' : 'Selecciona al menos un recuerdo o agrega una historia.', failed: lang === 'en' ? 'The album could not be saved. Your title, narrative and selection are still here. Please try again.' : 'No se pudo guardar el álbum. Tu título, narrativa y selección se conservan aquí. Inténtalo de nuevo.', saving: lang === 'en' ? 'Saving album…' : 'Guardando álbum…', restored: lang === 'en' ? 'Your unfinished album has been restored.' : 'Se recuperó tu álbum sin terminar.', selected: lang === 'en' ? 'Selected memories: ' : 'Recuerdos seleccionados: ' }) %>">
   <input type="hidden" name="blocks" id="blocksJson" value="">
   <label><%= t('album_title') %> *<input name="title" required maxlength="200" placeholder="<%= t('album_hint') %>" value="<%= album ? album.title : '' %>"></label>
   <label><%= t('album_narrative') %> <span class="muted small">(<%= t('optional') %>)</span>
@@ -93,6 +95,8 @@
      }); %>
   </div>
   <% if (!memories.length) { %><p class="muted"><%= t('no_memories') %></p><% } %>
+  <p id="selectionCount" class="muted small" aria-live="polite"></p>
+  <p id="albumStatus" role="status" aria-live="polite"></p>
   <p><button class="btn" type="submit"><%= submitLabel || t('create_album') %></button>
   <a class="btn ghost" href="<%= album ? ('/families/' + family.id + '/workshop/' + album.id) : ('/families/' + family.id + '/workshop') %>"><%= t('cancel') %></a></p>
 </form>
@@ -101,13 +105,11 @@
 (function () {
   var list = document.getElementById('pickList');
   if (!list) return;
-  var T = {
-    titlePh: <%= JSON.stringify(t('story_title_ph')) %>,
-    textPh: <%= JSON.stringify(t('story_text_ph')) %>,
-    up: <%= JSON.stringify(t('move_up')) %>,
-    down: <%= JSON.stringify(t('move_down')) %>,
-    del: <%= JSON.stringify(t('delete')) %>
-  };
+  var form = document.getElementById('albumForm');
+  var T = JSON.parse(form.getAttribute('data-messages'));
+  var status = document.getElementById('albumStatus');
+  var draftKey = 'legado-album:' + form.getAttribute('data-draft-user') + ':' + form.getAttribute('action');
+  var saving = false;
   var fFrom = document.getElementById('fFrom'), fTo = document.getElementById('fTo'),
       fKw = document.getElementById('fKw'), fPeople = document.getElementById('fPeople'),
       countLabel = document.getElementById('countLabel');
@@ -157,6 +159,7 @@
     memItems().forEach(function (it) {
       if (it.style.display !== 'none') it.querySelector('.pickcheck').checked = true;
     });
+    saveDraft();
   });
 
   function renumber() {
@@ -165,6 +168,7 @@
       n++;
       it.querySelector('.pick-num').textContent = n;
     });
+    saveDraft();
   }
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -249,8 +253,9 @@
     list.appendChild(frag);
     renumber();
   });
-  // Al enviar: serializa los bloques en orden
-  document.getElementById('albumForm').addEventListener('submit', function () {
+  // Recorre todas las tarjetas en su orden; incluye solo las marcadas,
+  // también cuando no son consecutivas o están ocultas por un filtro.
+  function collectBlocks() {
     var blocks = [];
     Array.prototype.forEach.call(list.querySelectorAll('.pick'), function (it) {
       if (it.classList.contains('story')) {
@@ -262,8 +267,75 @@
         if (cb && cb.checked) blocks.push({ type: 'memory', id: parseInt(cb.value, 10) });
       }
     });
+    return blocks;
+  }
+  function saveDraft() {
+    var blocks = collectBlocks();
     document.getElementById('blocksJson').value = JSON.stringify(blocks);
+    document.getElementById('selectionCount').textContent = T.selected + blocks.filter(function (b) { return b.type === 'memory'; }).length;
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify({
+        title: form.elements.title.value, narrative: form.elements.narrative.value,
+        theme: form.elements.theme.value, blocks: blocks
+      }));
+    } catch (err) { /* El formulario sigue funcionando sin almacenamiento local. */ }
+  }
+  function restoreDraft() {
+    try {
+      var draft = JSON.parse(sessionStorage.getItem(draftKey) || 'null');
+      if (!draft || !Array.isArray(draft.blocks)) return;
+      form.elements.title.value = draft.title || '';
+      form.elements.narrative.value = draft.narrative || '';
+      form.elements.theme.value = draft.theme || 'general';
+      var byId = new Map();
+      memItems().forEach(function (it) {
+        it.querySelector('.pickcheck').checked = false;
+        byId.set(Number(it.getAttribute('data-id')), it);
+      });
+      list.querySelectorAll('.story').forEach(function (it) { it.remove(); });
+      draft.blocks.forEach(function (b) {
+        if (b.type === 'story') list.appendChild(storyNode(b.title, b.text));
+        else if (byId.has(Number(b.id))) {
+          var it = byId.get(Number(b.id));
+          it.querySelector('.pickcheck').checked = true;
+          list.appendChild(it);
+          byId.delete(Number(b.id));
+        }
+      });
+      byId.forEach(function (it) { list.appendChild(it); });
+      status.textContent = T.restored;
+      renumber();
+    } catch (err) { /* Ignora un borrador inválido. */ }
+  }
+  form.addEventListener('input', saveDraft);
+  form.addEventListener('change', saveDraft);
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (saving) return;
+    saveDraft();
+    if (!collectBlocks().length) { status.textContent = T.empty; return; }
+    saving = true;
+    var submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    status.textContent = T.saving;
+    try {
+      var response = await fetch(form.action, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(new FormData(form)).toString()
+      });
+      var result = await response.json();
+      if (!response.ok || !result.ok || !result.redirect) throw new Error('Album save failed');
+      try { sessionStorage.removeItem(draftKey); } catch (err) {}
+      window.location.assign(result.redirect);
+    } catch (err) {
+      status.textContent = T.failed;
+      saving = false;
+      submit.disabled = false;
+    }
   });
+  restoreDraft();
   applyFilters();
+  saveDraft();
 })();
 </script>
