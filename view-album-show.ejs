@@ -3,6 +3,7 @@
   <h1>📖 <%= album.title %></h1>
   <p>
     <a class="btn" href="/families/<%= family.id %>/workshop/<%= album.id %>/download"><%= t('download_pdf') %></a>
+    <a class="btn" href="/families/<%= family.id %>/workshop/<%= album.id %>/download-html"><%= lang === 'en' ? 'Download HTML album (ZIP)' : 'Descargar álbum HTML (ZIP)' %></a>
     <% if (canWrite) { %>
     <a class="btn small" href="/families/<%= family.id %>/workshop/<%= album.id %>/edit"><%= t('edit_album') %></a>
     <form class="inline" method="post" action="/families/<%= family.id %>/workshop/<%= album.id %>/delete"
@@ -13,6 +14,7 @@
     <a class="btn ghost small" href="/families/<%= family.id %>/workshop"><%= t('back') %></a>
   </p>
 </div>
+<p class="muted small"><%= lang === 'en' ? 'The ZIP includes the HTML album and available photos, videos and audio. Extract everything and open album.html in a browser; keep the medios folder beside it. On mobile, you can also play your album directly on this page.' : 'El ZIP incluye el álbum HTML y las fotos, videos y audios disponibles. Extrae todo y abre album.html en un navegador; conserva la carpeta medios junto a él. En el celular también puedes reproducir tu álbum directamente en esta página.' %></p>
 <p class="muted"><%= memCount === 1 ? t('one_memory') : t('memories_count', { n: memCount }) %></p>
 <p class="muted small"><%= t('by_author', { name: album.author_name || '—' }) %> · <%= t('created_on', { date: fmtDate(album.created_at) }) %> · <%= t('theme_' + (album.theme || 'general')) %></p>
 <% if (album.narrative) { %><div class="card"><p style="white-space:pre-wrap"><%= album.narrative %></p></div><% } %>
@@ -25,12 +27,15 @@
   </div>
 <%   } else {
        const m = it.memory; %>
-  <a class="card memcard" href="/families/<%= family.id %>/memories/<%= m.id %>">
-    <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="" loading="lazy"><% }
-       else if (m.video_path) { %><span class="memthumb"><video src="<%= m.video_path %>" preload="metadata" muted playsinline></video><span class="playbadge">▶</span></span><% } %>
-    <h4><%= m.title %></h4>
+  <article class="card">
+    <% if (m.photo_path) { %><img src="<%= m.photo_path %>" alt="<%= m.title %>" loading="lazy" style="width:100%;height:auto;max-height:65vh;object-fit:contain;border-radius:8px"><% } %>
+    <% if (m.video_path) { %><video src="<%= m.video_path %>" controls playsinline preload="none" aria-label="<%= m.title %>" style="width:100%;max-height:65vh;border-radius:8px;background:#181818"></video>
+    <p class="small"><a href="<%= m.video_path %>" target="_blank" rel="noopener"><%= lang === 'en' ? 'Open video' : 'Abrir video' %></a></p><% } %>
+    <% if (m.audio_path) { %><audio src="<%= m.audio_path %>" controls preload="none" aria-label="<%= m.title %>" style="width:100%"></audio><% } %>
+    <h4><a href="/families/<%= family.id %>/memories/<%= m.id %>"><%= m.title %></a></h4>
     <p class="muted small"><%= fmtMemDate(m) %></p>
-  </a>
+    <% if (m.story) { %><p style="white-space:pre-wrap;overflow-wrap:anywhere"><%= m.story %></p><% } %>
+  </article>
 <%   }
    }); %>
 </div>

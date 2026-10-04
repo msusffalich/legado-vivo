@@ -1,0 +1,73 @@
+LEGADO VIVO — ÁLBUM HTML MULTIMEDIA
+Actualización preparada el 4 de octubre de 2026.
+
+INSTALAR
+1. Descomprime legado-vivo-html-multimedia.zip.
+2. Abre https://github.com/msusffalich/legado-vivo en la rama main.
+3. Add file > Upload files.
+4. Sube juntos estos TRES archivos a la raíz del repositorio:
+   - album-html.js (nuevo)
+   - routes-workshop.js (reemplaza el existente)
+   - view-album-show.ejs (reemplaza el existente)
+5. Commit changes > Commit directly to main.
+6. Espera a que Railway termine el despliegue y muestre SUCCESS.
+No subas este ZIP como archivo al repositorio: sube los tres archivos extraídos.
+No cambies variables, base de datos ni dependencias para esta actualización.
+La corrección anterior de selección de recuerdos se conserva en routes-workshop.js.
+Esta actualización está basada en el código de main consultado el 4 de octubre.
+Si modificaste los mismos archivos después, compara los cambios antes de reemplazarlos.
+
+USAR
+1. Entra a tu familia > Taller y abre un álbum guardado.
+2. Encontrarás Descargar PDF y Descargar álbum HTML (ZIP).
+3. Descarga el ZIP del álbum y extrae TODO su contenido.
+4. Abre album.html en un navegador y conserva medios en la misma carpeta.
+5. Los videos tienen controles de reproducción, volumen y pantalla completa;
+   conservan la pista de audio del archivo original, sin silenciarla por defecto.
+6. Los audios independientes tienen su propio reproductor.
+7. Para compartir el álbum completo, envía el ZIP completo, no solo el HTML.
+
+COMPUTADORAS, TABLETS Y CELULARES
+El diseño se adapta al ancho de pantalla. Los reproductores usan controles nativos.
+La vista web de Legado también reproduce directamente los videos y audios del álbum.
+La apertura de archivos HTML locales con carpetas adjuntas depende del sistema,
+del navegador y del gestor de archivos; algunas vistas previas móviles no la permiten.
+En ese caso usa un navegador que abra la carpeta completa o la vista web de Legado.
+No se ha probado físicamente en todos los dispositivos y navegadores.
+La compatibilidad de cada video/audio depende del formato y códec original:
+MP4 con video H.264 y audio AAC ofrece amplia compatibilidad. No se recodifican medios.
+Si un formato no se reproduce, Abrir archivo permite usar un reproductor compatible.
+
+CONTENIDO DE LA EXPORTACIÓN
+Portada, autor, narrativa, temática, recuerdos en su orden guardado, historias
+intermedias, fotos, videos con audio, audios, documentos adjuntos disponibles,
+transcripciones, texto de documentos y comentarios de IA existentes.
+No utiliza fuentes, scripts o recursos remotos para mostrar los archivos incluidos.
+Los recursos externos no descargados se muestran como enlaces que requieren internet.
+Los archivos faltantes se indican dentro del álbum y en LEEME-README.txt.
+Límite por descarga: menos de 4 GiB y menos de 65.535 archivos. Si se supera,
+se solicita dividir el álbum antes de empezar a enviar un ZIP inválido.
+La descarga lee archivos por fragmentos para no cargar todos los videos en memoria.
+
+VERIFICACIÓN REALIZADA
+- Exportaciones ES/EN con selección no consecutiva y relatos intercalados.
+- ZIP verificado mediante la librería estándar zipfile: CRC y archivos íntegros.
+- Rutas relativas de fotos, video y audio comprobadas contra el contenido del ZIP.
+- Video MP4 de prueba extraído: pista H.264 y pista AAC confirmadas con ffprobe;
+  video y audio exportados son idénticos byte por byte a los archivos de origen.
+- Descarga HTTP en un servidor local y comprobación de tamaño y encabezados.
+- Rechazo de álbum de otra familia, rutas fuera de uploads y enlaces simbólicos externos.
+- Textos HTML escapados, enlaces peligrosos rechazados, archivos faltantes señalados.
+- Botón PDF preservado y plantillas ES/EN renderizadas con los nuevos reproductores.
+
+PUBLICACIÓN
+El intento de publicación directa devolvió un error 403 de permisos de GitHub.
+No se ha publicado esta actualización desde esta conversación.
+
+ENGLISH QUICK GUIDE
+Upload album-html.js, routes-workshop.js and view-album-show.ejs together to the
+repository root on main. After Railway deploys successfully, open a saved album
+and choose Download HTML album (ZIP). Extract everything and open album.html;
+keep medios beside it. Videos retain their original audio. Local-file support
+varies on mobile; use the live album page when necessary. Original codecs are
+preserved, not transcoded. External-only links need an internet connection.

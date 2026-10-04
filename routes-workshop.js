@@ -4,6 +4,9 @@ const db = require('./db');
 const { canWrite, requireAdmin } = require('./mw');
 const { generateAlbumPDF } = require('./pdfgen');
 const { THEME_IDS } = require('./album-themes');
+const { prepareAlbumHTML, albumZip } = require('./album-html');
+const { Readable } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
 
 const router = express.Router({ mergeParams: true });
 
@@ -209,6 +212,36 @@ router.get('/:aid/download', async (req, res) => {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${fname}.pdf"`);
   res.send(pdf);
+});
+
+router.get('/:aid/download-html', async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT a.*, u.name AS author_name FROM albums a LEFT JOIN users u ON u.id=a.created_by WHERE a.id=$1 AND a.family_id=$2',
+      [req.params.aid, req.family.id]);
+    if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
+    const album = rows[0];
+    const items = await resolveItems(normalizeBlocks(album.memory_ids));
+    const archive = await prepareAlbumHTML({ family: req.family, album, items, lang: req.lang });
+    const filename = String(album.title || 'album').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 100) || 'album';
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}-HTML.zip"`);
+    res.setHeader('Content-Length', String(archive.size));
+    res.setHeader('Cache-Control', 'private, no-store');
+    await pipeline(Readable.from(albumZip(archive.entries)), res);
+  } catch (err) {
+    console.error('[album:html]', err);
+    if (res.headersSent || res.destroyed) { if (!res.destroyed) res.destroy(err); return; }
+    res.removeHeader('Content-Length');
+    res.removeHeader('Content-Disposition');
+    res.removeHeader('Content-Type');
+    const large = err.code === 'ALBUM_TOO_LARGE';
+    const message = large
+      ? (req.lang === 'en' ? 'This album is too large for one ZIP (4 GB). Create smaller albums and download them separately.' : 'Este álbum supera el límite de un ZIP (4 GB). Crea álbumes más pequeños y descárgalos por separado.')
+      : (req.lang === 'en' ? 'The download could not be completed. Your saved album is intact; please try again.' : 'No se pudo completar la descarga. Tu álbum guardado se conserva; vuelve a intentarlo.');
+    res.status(large ? 413 : 500).render('view-layout', { page: 'view-error', title: 'HTML', message });
+  }
 });
 
 router.post('/:aid/delete', canWrite, async (req, res) => {
