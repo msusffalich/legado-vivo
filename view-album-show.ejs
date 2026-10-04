@@ -14,7 +14,7 @@
     <a class="btn ghost small" href="/families/<%= family.id %>/workshop"><%= t('back') %></a>
   </p>
 </div>
-<p class="muted small"><%= lang === 'en' ? 'The ZIP includes the HTML album and available photos, videos and audio. Extract everything and open album.html in a browser; keep the medios folder beside it. On mobile, you can also play your album directly on this page.' : 'El ZIP incluye el álbum HTML y las fotos, videos y audios disponibles. Extrae todo y abre album.html en un navegador; conserva la carpeta medios junto a él. En el celular también puedes reproducir tu álbum directamente en esta página.' %></p>
+<p class="muted small"><%= lang === 'en' ? 'The ZIP includes the HTML album and available photos, videos and audio. Extract album.html and open it in a browser: photos, videos and audio are embedded in the HTML. On mobile, you can also play your album directly on this page.' : 'El ZIP incluye el álbum HTML y las fotos, videos y audios disponibles. Extrae album.html y ábrelo en un navegador: las fotos, los videos y los audios van incorporados en el HTML. En el celular también puedes reproducir tu álbum directamente en esta página.' %></p>
 <p class="muted"><%= memCount === 1 ? t('one_memory') : t('memories_count', { n: memCount }) %></p>
 <p class="muted small"><%= t('by_author', { name: album.author_name || '—' }) %> · <%= t('created_on', { date: fmtDate(album.created_at) }) %> · <%= t('theme_' + (album.theme || 'general')) %></p>
 <% if (album.narrative) { %><div class="card"><p style="white-space:pre-wrap"><%= album.narrative %></p></div><% } %>

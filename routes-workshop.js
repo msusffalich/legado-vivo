@@ -238,7 +238,7 @@ router.get('/:aid/download-html', async (req, res) => {
     res.removeHeader('Content-Type');
     const large = err.code === 'ALBUM_TOO_LARGE';
     const message = large
-      ? (req.lang === 'en' ? 'This album is too large for one ZIP (4 GB). Create smaller albums and download them separately.' : 'Este álbum supera el límite de un ZIP (4 GB). Crea álbumes más pequeños y descárgalos por separado.')
+      ? (req.lang === 'en' ? 'This album is too large to embed (120 MB of optimized media). Create smaller albums and download them separately.' : 'Este álbum supera el límite para incorporar sus medios (120 MB optimizados). Crea álbumes más pequeños y descárgalos por separado.')
       : (req.lang === 'en' ? 'The download could not be completed. Your saved album is intact; please try again.' : 'No se pudo completar la descarga. Tu álbum guardado se conserva; vuelve a intentarlo.');
     res.status(large ? 413 : 500).render('view-layout', { page: 'view-error', title: 'HTML', message });
   }

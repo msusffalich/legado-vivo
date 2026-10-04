@@ -2,6 +2,8 @@
 // Portable HTML albums. No remote fetches, extra packages, or database writes.
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
+const { spawn } = require('node:child_process');
 const { themeOf } = require('./album-themes');
 
 const escapeHtml = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c =>
@@ -15,8 +17,8 @@ const WORDS = {
     documentText: 'Texto del documento', ai: 'Comentario de IA',
     open: 'Abrir archivo', external: 'Abrir enlace original (requiere internet)',
     missing: 'Archivo no disponible en esta copia', notes: 'Archivos y enlaces',
-    help: 'Descomprime todo el ZIP y abre album.html. Mantén la carpeta medios junto al HTML.',
-    playback: 'Si un video o audio no se reproduce en este navegador, usa «Abrir archivo» para verlo con un reproductor compatible.',
+    help: 'Extrae album.html y ábrelo en un navegador. Las fotos, los videos y los audios están incorporados en ese archivo; los documentos adjuntos, si los hay, están en medios.',
+    playback: 'Pulsa reproducir para escuchar el audio original del video. Abre este archivo en un navegador, no en una vista previa de documentos.',
     offline: 'Los archivos incluidos se pueden abrir sin conexión. Los enlaces originales necesitan internet.',
     top: 'Volver a la portada', noDate: 'Sin fecha', by: 'Por',
   },
@@ -26,8 +28,8 @@ const WORDS = {
     document: 'Document', people: 'People', transcript: 'Transcript',
     documentText: 'Document text', ai: 'AI comment', open: 'Open file',
     external: 'Open original link (internet required)', missing: 'File unavailable in this copy',
-    notes: 'Files and links', help: 'Extract the whole ZIP and open album.html. Keep the medios folder beside the HTML.',
-    playback: 'If a video or audio cannot play in this browser, use “Open file” with a compatible player.',
+    notes: 'Files and links', help: 'Extract album.html and open it in a browser. Photos, videos and audio are embedded in that file; document attachments, if any, are in medios.',
+    playback: 'Press play to hear the original video audio. Open this file in a browser, not a document preview.',
     offline: 'Included files work offline. Original links require internet.',
     top: 'Back to cover', noDate: 'No date', by: 'By',
   },
@@ -50,6 +52,43 @@ function dateLabel(value, lang, approx) {
   });
 }
 
+// Serialize conversion work to avoid exhausting the production server.
+let conversionQueue = Promise.resolve();
+function convertMedia(source, kind) {
+  const task = conversionQueue.catch(() => {}).then(async () => {
+    const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'legado-html-'));
+    const ext = kind === 'photo' ? '.jpg' : kind === 'audio' ? '.mp3' : '.mp4';
+    const output = path.join(dir, 'media' + ext);
+    try {
+      const binary = process.env.FFMPEG_PATH || require('ffmpeg-static');
+      const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', '-i', source];
+      if (kind === 'photo') args.push('-frames:v', '1', '-vf', 'scale=1920:1920:force_original_aspect_ratio=decrease', '-q:v', '2', '-threads', '1');
+      else if (kind === 'audio') args.push('-vn', '-c:a', 'libmp3lame', '-b:a', '160k', '-ac', '2');
+      else args.push('-map', '0:v:0', '-map', '0:a:0?', '-vf', 'scale=1280:1280:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1',
+        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-threads', '2',
+        '-c:a', 'aac', '-b:a', '160k', '-ac', '2', '-movflags', '+faststart');
+      args.push('-map_metadata', '-1', '-y', output);
+      await new Promise((resolve, reject) => {
+        const child = spawn(binary, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+        let detail = '';
+        child.stderr.on('data', chunk => { detail = (detail + chunk).slice(-1500); });
+        const timer = setTimeout(() => child.kill('SIGKILL'), 180000);
+        child.once('error', err => { clearTimeout(timer); reject(err); });
+        child.once('close', code => {
+          clearTimeout(timer);
+          if (code === 0) resolve();
+          else { const err = new Error('Media conversion failed: ' + detail); err.code = 'MEDIA_CONVERSION_FAILED'; reject(err); }
+        });
+      });
+      const info = await fs.promises.stat(output);
+      if (info.size > 80 * 1024 * 1024) { const err = new Error('Embedded media too large'); err.code = 'ALBUM_TOO_LARGE'; throw err; }
+      return { data: await fs.promises.readFile(output), mime: kind === 'photo' ? 'image/jpeg' : kind === 'audio' ? 'audio/mpeg' : 'video/mp4' };
+    } finally { await fs.promises.rm(dir, { recursive: true, force: true }); }
+  });
+  conversionQueue = task.then(() => undefined, () => undefined);
+  return task;
+}
+
 // Read only basename paths inside UPLOAD_DIR; reject traversal and escaping symlinks.
 async function prepareAlbumHTML({ family, album, items, lang = 'es', uploadDir }) {
   lang = lang === 'en' ? 'en' : 'es';
@@ -57,22 +96,32 @@ async function prepareAlbumHTML({ family, album, items, lang = 'es', uploadDir }
   let root = null;
   try { root = await fs.promises.realpath(uploadDir || process.env.UPLOAD_DIR || path.join(__dirname, 'uploads')); }
   catch (err) { if (err.code !== 'ENOENT') throw err; }
+  let embeddedBytes = 0;
   const entries = [], copied = new Map(), notes = [], sections = [], toc = [];
   const allowed = new Set(['.jpg','.jpeg','.png','.webp','.gif','.avif','.heic','.mp4','.m4v','.mov','.webm','.ogv','.avi','.mkv','.mp3','.wav','.m4a','.ogg','.oga','.aac','.flac','.pdf','.txt','.md','.docx']);
-  async function mediaFile(value) {
+  async function mediaFile(value, kind) {
     if (!value || !root || typeof value !== 'string' || !/^\/uploads\/[^/\\]+$/.test(value)) return null;
     try {
       const source = await fs.promises.realpath(path.join(root, path.basename(value)));
       const relative = path.relative(root, source);
       if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
-      if (copied.has(source)) return copied.get(source);
+      const key = source + ':' + kind;
+      if (copied.has(key)) return copied.get(key);
       const stat = await fs.promises.stat(source);
       if (!stat.isFile()) return null;
       await fs.promises.access(source, fs.constants.R_OK);
+      if (kind !== 'document') {
+        const converted = await convertMedia(source, kind).catch(err => { if (err.code !== 'ALBUM_TOO_LARGE') err.code = 'MEDIA_CONVERSION_FAILED'; throw err; });
+        embeddedBytes += converted.data.length;
+        if (embeddedBytes > 120 * 1024 * 1024) { const err = new Error('Embedded album too large'); err.code = 'ALBUM_TOO_LARGE'; throw err; }
+        const uri = 'data:' + converted.mime + ';base64,' + converted.data.toString('base64');
+        copied.set(key, uri);
+        return uri;
+      }
       const ext = path.extname(source).toLowerCase();
       const name = `medios/archivo-${String(entries.length + 1).padStart(4, '0')}${allowed.has(ext) ? ext : '.bin'}`;
       entries.push({ name, path: source, size: stat.size });
-      copied.set(source, name);
+      copied.set(key, name);
       return name;
     } catch (err) {
       if (['ENOENT','EACCES','ENOTDIR','ELOOP'].includes(err.code)) return null;
@@ -97,12 +146,12 @@ async function prepareAlbumHTML({ family, album, items, lang = 'es', uploadDir }
       ['photo','photo_path','photo_url'], ['video','video_path','video_url'],
       ['audio','audio_path',null], ['document','doc_path',null],
     ]) {
-      const src = await mediaFile(m[field]);
+      const src = await mediaFile(m[field], kind);
       const original = remote ? externalUrl(m[remote]) : '';
       if (src) {
-        if (kind === 'photo') media.push(`<figure><img src="${src}" alt="${e(title)}" loading="lazy"></figure>`);
-        else if (kind === 'video') media.push(`<figure><video controls playsinline preload="none" aria-label="${e(title)}" src="${src}"></video><figcaption><a href="${src}">${e(w.open)} · ${e(w.video)}</a></figcaption></figure>`);
-        else if (kind === 'audio') media.push(`<figure><audio controls preload="none" aria-label="${e(title)}" src="${src}"></audio><figcaption><a href="${src}">${e(w.open)} · ${e(w.audio)}</a></figcaption></figure>`);
+        if (kind === 'photo') media.push(`<figure><img src="${src}" alt="${e(title)}" loading="eager"></figure>`);
+        else if (kind === 'video') media.push(`<figure><video controls playsinline preload="metadata" aria-label="${e(title)}" src="${src}"></video><figcaption>${e(w.video)}</figcaption></figure>`);
+        else if (kind === 'audio') media.push(`<figure><audio controls preload="metadata" aria-label="${e(title)}" src="${src}"></audio><figcaption>${e(w.audio)}</figcaption></figure>`);
         else media.push(`<p><a class="file-link" href="${src}" download>${e(w.document)}: ${e(m.doc_name || w.open)}</a></p>`);
       } else if (m[field] || (remote && m[remote])) {
         const warning = `${title} — ${w[kind]}: ${w.missing}`;

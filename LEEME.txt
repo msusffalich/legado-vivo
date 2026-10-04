@@ -1,51 +1,26 @@
-LEEME — Parche de idioma v1.3.3 (2026-09-29) / Language patch v1.3.3
-================================================================
+LEGADO VIVO — HTML AUTOCONTENIDO (corrección)
 
-ESPAÑOL
--------
-Este ZIP contiene SOLO los archivos modificados del parche v1.3.3
-(3 correcciones de idioma en la ayuda/textos de la app):
+Subir juntos a la raíz de main: album-html.js, routes-workshop.js y view-album-show.ejs.
+No subir el ZIP entero. Railway desplegará al confirmar el commit.
 
-1. view-memory-edit.ejs — la etiqueta "Actual:" del video actual en
-   *Editar recuerdo* ahora usa t('current') y respeta el idioma
-   seleccionado (antes estaba hardcodeada en español).
-2. locale-en.json — agregada la clave faltante "invite_used": "Used"
-   (nueva clave "current": "Current" en inglés).
-3. locale-es.json — nueva clave "current": "Actual".
-4. view-invites.ejs — el <textarea id="wamsg"> ahora lleva
-   data-copied con el texto traducido, y el aviso de "mensaje copiado"
-   sale en tu idioma (assets-app.js ya lo soportaba, no cambió).
-5. README.md — nota de versión v1.3.3 (ES+EN).
+Cambio: fotos JPEG, videos MP4 H.264/AAC y audio MP3 incorporados en album.html.
+Al abrir el HTML ya no depende de una carpeta medios para fotos/videos/audio.
+Los videos conservan su audio y se optimizan a un máximo de 1280 píxeles por lado.
+Las fotos se adaptan a 1920 píxeles. Los originales permanecen intactos.
+Los documentos adjuntos siguen en medios. Enlaces externos no descargados requieren internet.
+Se utiliza ffmpeg-static, ya presente en las dependencias. No modifica la base de datos.
+Límites: 80 MiB por medio convertido y 120 MiB por álbum optimizado.
+La conversión se ejecuta de una en una. Un error de conversión interrumpe la exportación
+con un error visible en lugar de producir un álbum sin el archivo.
+La primera descarga puede tardar varios minutos por la conversión de los videos.
+La reproducción debe hacerse desde un navegador; algunas vistas previas móviles la bloquean.
 
-INSTALACIÓN:
-1. En GitHub, repo de Legado Vivo: Add file → Upload files.
-2. Sube estos archivos tal cual (planos en la raíz), SOBRESCRIBIENDO
-   los existentes cuando GitHub lo indique.
-3. Commit.
-4. En Railway: servicio → Manual Deploy → Deploy latest commit.
-5. No requiere variables nuevas ni migraciones.
-
-ENGLISH
--------
-This ZIP contains ONLY the files changed in patch v1.3.3
-(3 language fixes in the app's help/texts):
-
-1. view-memory-edit.ejs — the current-video "Actual:" label in
-   *Edit memory* now uses t('current') and follows the selected
-   language (it was hardcoded in Spanish).
-2. locale-en.json — added the missing "invite_used": "Used" key
-   (new "current": "Current" key in English).
-3. locale-es.json — new "current": "Actual" key.
-4. view-invites.ejs — the <textarea id="wamsg"> now carries a
-   translated data-copied attribute, so the "message copied" notice
-   shows in your language (assets-app.js already supported it,
-   unchanged).
-5. README.md — v1.3.3 version note (ES+EN).
-
-INSTALL:
-1. In GitHub, your Legado Vivo repo: Add file → Upload files.
-2. Upload these files as-is (flat at the root), OVERWRITING the
-   existing ones when GitHub prompts.
-3. Commit.
-4. In Railway: service → Manual Deploy → Deploy latest commit.
-5. No new variables or migrations required.
+Validado con el ZIP real de Cumpleaños Ceci: contiene 22 fotos JPEG y 2 videos MOV
+con H.264/AAC. Los archivos originales y el ZIP están íntegros.
+Las imágenes ausentes no se deben a que faltaran en el ZIP; no se ha observado
+el procedimiento de apertura del usuario. El HTML anterior dependía de rutas relativas.
+La versión autocontenida elimina esa dependencia y normaliza el contenedor de video.
+Se verificaron las imágenes y las pistas completas de video/audio de la copia corregida.
+Se probó el nuevo exportador con foto, video y audio locales.
+No se ha probado físicamente en todos los navegadores/dispositivos.
+Publicación pendiente: la integración GitHub devolvió 403 en intentos anteriores.
