@@ -1,26 +1,25 @@
-LEGADO VIVO — HTML AUTOCONTENIDO (corrección)
+LEGADO VIVO — MOVER VARIOS PANELES EN TALLER
+5 de octubre de 2026
 
-Subir juntos a la raíz de main: album-html.js, routes-workshop.js y view-album-show.ejs.
-No subir el ZIP entero. Railway desplegará al confirmar el commit.
+INSTALACION
+1. Extrae este ZIP.
+2. En github.com/msusffalich/legado-vivo, rama main, abre Add file > Upload files.
+3. Sube SOLO view-album-new.ejs en la raiz y confirma Commit changes.
+4. Espera a que Railway termine el despliegue. Recarga Taller.
 
-Cambio: fotos JPEG, videos MP4 H.264/AAC y audio MP3 incorporados en album.html.
-Al abrir el HTML ya no depende de una carpeta medios para fotos/videos/audio.
-Los videos conservan su audio y se optimizan a un máximo de 1280 píxeles por lado.
-Las fotos se adaptan a 1920 píxeles. Los originales permanecen intactos.
-Los documentos adjuntos siguen en medios. Enlaces externos no descargados requieren internet.
-Se utiliza ffmpeg-static, ya presente en las dependencias. No modifica la base de datos.
-Límites: 80 MiB por medio convertido y 120 MiB por álbum optimizado.
-La conversión se ejecuta de una en una. Un error de conversión interrumpe la exportación
-con un error visible en lugar de producir un álbum sin el archivo.
-La primera descarga puede tardar varios minutos por la conversión de los videos.
-La reproducción debe hacerse desde un navegador; algunas vistas previas móviles la bloquean.
+USO
+- Marca Mover en cada panel que quieras desplazar. Pueden estar separados.
+- Arrastra el asa de cualquiera de los paneles marcados: se mueve todo el grupo manteniendo su orden.
+- Mantén el asa cerca del borde superior o inferior de la pantalla: la página se desplaza automáticamente mientras sostienes el arrastre.
+- Suelta para colocar el grupo en la línea azul. Escape cancela el arrastre.
+- También puedes usar Al inicio, Al final, Subir, Bajar o indicar la posición donde debe empezar el grupo y pulsar Mover aquí.
+- Las marcas Mover son distintas de las casillas de inclusión del álbum. Mover no incluye ni excluye recuerdos.
+- Los filtros quitan las marcas Mover de los paneles que quedan ocultos. Las casillas de inclusión del álbum permanecen intactas.
+- Pulsa Crear álbum o Guardar cambios para conservar el orden en el servidor.
 
-Validado con el ZIP real de Cumpleaños Ceci: contiene 22 fotos JPEG y 2 videos MOV
-con H.264/AAC. Los archivos originales y el ZIP están íntegros.
-Las imágenes ausentes no se deben a que faltaran en el ZIP; no se ha observado
-el procedimiento de apertura del usuario. El HTML anterior dependía de rutas relativas.
-La versión autocontenida elimina esa dependencia y normaliza el contenedor de video.
-Se verificaron las imágenes y las pistas completas de video/audio de la copia corregida.
-Se probó el nuevo exportador con foto, video y audio locales.
-No se ha probado físicamente en todos los navegadores/dispositivos.
-Publicación pendiente: la integración GitHub devolvió 403 en intentos anteriores.
+ALCANCE Y VALIDACION
+Parche basado en la plantilla actual de main, con los arreglos anteriores de selección no consecutiva y recuperación del borrador.
+Un solo archivo de aplicación; sin dependencias nuevas ni migraciones.
+No cambia la exportación PDF ni HTML con fotos, videos y audio.
+Pruebas automáticas con DOM: renderizado español/inglés; grupos separados; posiciones; historias; filtros; independencia de la inclusión en el álbum; orden del borrador; arrastre; scroll de borde simulado; Escape y cancelación táctil.
+Pendiente de prueba visual en navegador/dispositivo real después de publicar. No se desplegó automáticamente desde esta sesión.
