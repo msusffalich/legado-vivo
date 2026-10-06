@@ -4,14 +4,15 @@
 <form id="memory-form" method="post" action="/families/<%= family.id %>/memories" enctype="multipart/form-data">
   <label><%= t('memory_title') %> *<input name="title" required maxlength="200"></label>
 
+  <p class="muted small"><%= lang === 'en' ? 'HEIC/HEIF and other supported photos are converted to JPEG; videos to MP4 with their audio. Conversion runs after upload. Original files are kept on the server. Animated or multi-image photos use their first still image.' : 'Las fotos HEIC/HEIF y los demás formatos compatibles se convierten a JPEG; los videos, a MP4 con su audio. La conversión continúa después de la carga. Los originales se conservan en el servidor. En fotos animadas o con varias imágenes se usa la primera imagen fija.' %></p>
   <div class="two">
-    <label><%= t('photo_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="photo" accept="image/*"></label>
+    <label><%= t('photo_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="photo" accept="image/*,.heic,.heif,.hif,.avif,.tif,.tiff,.bmp,.webp,.gif,.svg,.ico,.dng,.cr2,.cr3,.crw,.nef,.arw,.rw2,.orf,.pef,.srw,.raf,.raw,.psd"></label>
     <label><%= t('audio_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="audio" accept="audio/*"></label>
   </div>
   <label><%= t('photo_url_label') %> <span class="muted">(<%= t('optional') %>)</span>
     <input type="url" name="photo_url" inputmode="url" placeholder="https://…/foto.jpg">
     <span class="muted small"><%= t('photo_url_hint') %></span></label>
-  <label><%= t('video_label') %> <span class="muted">(<%= t('optional') %> · <%= t('video_max_hint') %>)</span><input type="file" name="video" accept="video/*"></label>
+  <label><%= t('video_label') %> <span class="muted">(<%= t('optional') %> · <%= t('video_max_hint') %>)</span><input type="file" name="video" accept="video/*,.mp4,.m4v,.mov,.avi,.mkv,.webm,.wmv,.flv,.3gp,.3g2,.mts,.m2ts,.ts,.mpg,.mpeg,.ogv"></label>
   <label><%= t('video_url_label') %> <span class="muted">(<%= t('optional') %>)</span>
     <input type="url" name="video_url" inputmode="url" placeholder="https://www.youtube.com/watch?v=… / https://www.instagram.com/reel/…">
     <span class="muted small"><%= t('video_url_hint') %></span></label>
@@ -65,3 +66,4 @@
   <%- include('view-inc-uploadprogress') %>
 </form>
 </div>
+

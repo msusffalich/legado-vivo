@@ -1,25 +1,36 @@
-LEGADO VIVO — MOVER VARIOS PANELES EN TALLER
-5 de octubre de 2026
+LEGADO VIVO — CONVERSION DE FOTOS HEIC Y MEDIOS AL GUARDAR
+6 de octubre de 2026
 
-INSTALACION
-1. Extrae este ZIP.
-2. En github.com/msusffalich/legado-vivo, rama main, abre Add file > Upload files.
-3. Sube SOLO view-album-new.ejs en la raiz y confirma Commit changes.
-4. Espera a que Railway termine el despliegue. Recarga Taller.
+INSTALAR
+Extrae el ZIP. Sube los 11 archivos de aplicación (todos salvo este LEEME.txt) juntos a la raíz de msusffalich/legado-vivo, rama main, y confirma Commit changes.
+Incluye package.json, package-lock.json y nixpacks.toml: instalan los conversores. No es suficiente subir solo las rutas.
+Espera al despliegue correcto de Railway y recarga Legado.
+Este parche no se ha publicado automáticamente. No reemplaza la plantilla de Taller ni el exportador HTML; conserva el movimiento de grupos y los álbumes con multimedia.
 
-USO
-- Marca Mover en cada panel que quieras desplazar. Pueden estar separados.
-- Arrastra el asa de cualquiera de los paneles marcados: se mueve todo el grupo manteniendo su orden.
-- Mantén el asa cerca del borde superior o inferior de la pantalla: la página se desplaza automáticamente mientras sostienes el arrastre.
-- Suelta para colocar el grupo en la línea azul. Escape cancela el arrastre.
-- También puedes usar Al inicio, Al final, Subir, Bajar o indicar la posición donde debe empezar el grupo y pulsar Mover aquí.
-- Las marcas Mover son distintas de las casillas de inclusión del álbum. Mover no incluye ni excluye recuerdos.
-- Los filtros quitan las marcas Mover de los paneles que quedan ocultos. Las casillas de inclusión del álbum permanecen intactas.
-- Pulsa Crear álbum o Guardar cambios para conservar el orden en el servidor.
+CAMBIOS
+- Al crear o editar un recuerdo, las fotos se convierten a una copia JPEG, los videos a MP4 H.264 con audio AAC y los audios a MP3.
+- Los originales quedan conservados en el almacenamiento protegido del servidor; la app utiliza la copia compatible. No hay descarga directa de los originales desde esta actualización.
+- HEIC/HEIF tiene decodificador específico, incluso cuando el navegador informa un MIME genérico.
+- Selección de archivo y pegado reconocen extensiones adicionales.
+- Las fotos/videos descargados por URL y las fotos/audios del Asistente Puente también pasan por el conversor.
+- Durante el procesamiento se informa que la carga terminó y que la conversión continúa.
+- Si falla una conversión, el formulario con JavaScript permanece abierto y muestra el error. No se registra la subida como correcta.
+- Para reparar medios antiguos: abre el recuerdo en Editar y guarda. Se convierten los archivos guardados que todavía no tengan una copia normalizada. No hay migración masiva automática.
 
-ALCANCE Y VALIDACION
-Parche basado en la plantilla actual de main, con los arreglos anteriores de selección no consecutiva y recuperación del borrador.
-Un solo archivo de aplicación; sin dependencias nuevas ni migraciones.
-No cambia la exportación PDF ni HTML con fotos, videos y audio.
-Pruebas automáticas con DOM: renderizado español/inglés; grupos separados; posiciones; historias; filtros; independencia de la inclusión en el álbum; orden del borrador; arrastre; scroll de borde simulado; Escape y cancelación táctil.
-Pendiente de prueba visual en navegador/dispositivo real después de publicar. No se desplegó automáticamente desde esta sesión.
+FORMATOS Y LIMITES
+Fotos: JPEG, PNG, HEIC/HEIF, WebP, AVIF, TIFF, GIF, BMP, SVG, ICO y PSD; también incluye LibRaw para variantes RAW de cámaras (DNG, CR2/CR3, NEF, ARW y otras reconocidas por ese decodificador).
+Video: contenedores habituales MP4, MOV, MKV, AVI, WebM, WMV, FLV, MPEG/TS, MTS/M2TS, 3GP y OGV, siempre que los codecs internos sean decodificables por FFmpeg.
+No existe garantía literal de todos los archivos: los protegidos, dañados o con codecs/variantes no disponibles deben producir un error explícito.
+La copia de foto usa hasta 4096 px de lado, JPEG calidad 94; transparencias sobre blanco. En GIF animado, TIFF/HEIF múltiple y PSD se muestra una imagen fija/composición; los originales se conservan.
+El video usa hasta 1920 px de lado, H.264, audio AAC estéreo cuando el original tiene audio. No se inventa una pista para videos silenciosos. Subtítulos y pistas alternativas no se copian a la versión de reproducción.
+Se mantienen los topes de entrada: foto/audio 100 MB, video 200 MB. Conversión: máximo 3 minutos por archivo, una tarea activa, hasta tres en espera durante 30 segundos; error visible si no hay capacidad. Máximo 80 megapíxeles en la ruta principal de fotos. Salida limitada a 100 MB para foto/audio y 300 MB para video.
+
+VALIDACION REALIZADA
+- HEIC real del repositorio público libheif, también renombrado sin extensión reconocible: conversión JPEG correcta.
+- JPEG, PNG, WebP, TIFF, AVIF, GIF, BMP, PSD e ICO; JPEG con orientación EXIF: conversión y orientación correctas.
+- MOV con HEVC y audio PCM: MP4 con H.264 y AAC, duración conservada y decodificación completa.
+- Extracción/conversión de audio a MP3.
+- Archivo HEIC dañado: rechazo y eliminación de salida parcial, sin borrar la fuente.
+- Rutas HTTP reales con base de datos simulada: carga HEIC con MIME genérico, escritura de ruta JPEG y texto, rechazo antes de insertar, limpieza de fallos, reparación al editar y conversión de fotos por URL.
+- Plantillas ES/EN y JavaScript válidos; dependencias anteriores mantienen sus versiones en el lockfile.
+Pendiente: comprobar el despliegue en Railway y una subida desde tu dispositivo. No se han ensayado todas las variantes RAW, codecs ni equipos.

@@ -15,6 +15,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
+const { normalizeMedia, mediaErrorMessage } = require('./media-normalize');
 
 const router = express.Router();
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
@@ -41,7 +42,7 @@ function saveBase64(b64, filename) {
   return '/uploads/' + name;
 }
 
-router.post('/drafts', checkKey, async (req, res) => {
+router.post('/drafts', checkKey, async (req, res, next) => {
   const b = req.body || {};
   const draftId = (b.draftId || '').trim();
   const familyId = parseInt(b.familyId, 10);
@@ -54,13 +55,30 @@ router.post('/drafts', checkKey, async (req, res) => {
   const { rows: dup } = await db.query('SELECT id FROM memories WHERE bridge_draft_id=$1', [draftId]);
   if (dup.length) return res.json({ ok: true, memoryId: dup[0].id, duplicate: true });
 
-  const photo = saveBase64(b.photoBase64, b.photoFilename || 'photo.jpg');
-  const audio = saveBase64(b.audioBase64, b.audioFilename || 'audio.ogg');
+  let photo = saveBase64(b.photoBase64, b.photoFilename || 'photo.jpg');
+  let audio = saveBase64(b.audioBase64, b.audioFilename || 'audio.ogg');
+  const createdFiles = [photo, audio].filter(Boolean).map(p => path.join(UPLOAD_DIR, path.basename(p)));
+  async function cleanup() { for (const f of createdFiles) await fs.promises.rm(f, { force: true }).catch(() => {}); }
+  try {
+    if ((b.photoBase64 && !photo) || (b.audioBase64 && !audio)) throw Object.assign(new Error('Invalid media'), { code: 'MEDIA_CONVERSION_FAILED' });
+    if (photo) {
+      const r = await normalizeMedia(path.join(UPLOAD_DIR, path.basename(photo)), 'photo');
+      createdFiles.push(r.path); photo = '/uploads/' + r.filename;
+    }
+    if (audio) {
+      const r = await normalizeMedia(path.join(UPLOAD_DIR, path.basename(audio)), 'audio');
+      createdFiles.push(r.path); audio = '/uploads/' + r.filename;
+    }
+  } catch (err) {
+    await cleanup();
+    return res.status(400).json({ ok: false, error: mediaErrorMessage(err, req.lang) });
+  }
   const story = b.text || b.story || '';
   const title = (b.title || '').trim() || story.split('\n')[0].slice(0, 80) || 'Recuerdo del asistente';
 
-  const client = await db.pool.connect();
+  let client;
   try {
+    client = await db.pool.connect();
     await client.query('BEGIN');
     const { rows } = await client.query(
       `INSERT INTO memories (family_id, title, story, transcription, place, memory_date, date_precision,
@@ -88,11 +106,13 @@ router.post('/drafts', checkKey, async (req, res) => {
     await client.query('COMMIT');
     res.json({ ok: true, memoryId: mid, duplicate: false });
   } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    await cleanup();
+    return next(err);
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 
 module.exports = router;
+

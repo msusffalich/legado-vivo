@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./db');
 const { loadFamily, canWrite } = require('./mw');
+const { normalizeMedia, normalizeUploads, mediaErrorMessage } = require('./media-normalize');
 const { ensureVideoThumb, deleteVideoThumb } = require('./video-thumb');
 const { extractDocText } = require('./doc-extract');
 const { aiEnabled, generateMemoryComment } = require('./ai');
@@ -26,7 +27,7 @@ const MEDIA_MAX_MB = 100; // límite para foto y audio
 // Formatos aceptados por extensión (además del MIME que reporta el navegador,
 // que a veces viene vacío o genérico según el dispositivo).
 const IMAGE_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tif', 'tiff',
-  'heic', 'heif', 'avif', 'svg', 'ico', 'dng', 'cr2', 'nef', 'arw', 'rw2', 'orf', 'pef', 'srw', 'psd']);
+  'heic', 'heif', 'hif', 'avif', 'svg', 'ico', 'dng', 'cr2', 'cr3', 'crw', 'raf', 'raw', 'nef', 'arw', 'rw2', 'orf', 'pef', 'srw', 'psd']);
 const VIDEO_EXT = new Set(['mp4', 'm4v', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv',
   '3gp', '3g2', 'mts', 'm2ts', 'ts', 'mpg', 'mpeg', 'ogv']);
 const AUDIO_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'flac', 'wma',
@@ -41,7 +42,9 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const mimeOk = /^(image|audio|video)\//.test(file.mimetype || '');
     const ext = path.extname(file.originalname || '').toLowerCase().replace(/^\./, '');
-    const ok = mimeOk || MEDIA_EXT.has(ext) || DOC_EXT.has(ext);
+    const accepted = file.fieldname === 'photo' ? IMAGE_EXT : file.fieldname === 'video' ? VIDEO_EXT : file.fieldname === 'audio' ? AUDIO_EXT : DOC_EXT;
+    const expected = file.fieldname === 'photo' ? 'image/' : file.fieldname === 'video' ? 'video/' : file.fieldname === 'audio' ? 'audio/' : null;
+    const ok = accepted.has(ext) || (expected && (file.mimetype || '').startsWith(expected));
     cb(ok ? null : new Error('badtype'), ok);
   },
 });
@@ -61,6 +64,7 @@ function cleanupUploads(files) {
   if (!files) return;
   for (const arr of Object.values(files)) {
     for (const f of arr || []) {
+      if (f.sourceFilename && !f.preserveSource) { try { fs.unlinkSync(path.join(UPLOAD_DIR, f.sourceFilename)); } catch (_) {} }
       try { fs.unlinkSync(path.join(UPLOAD_DIR, f.filename)); } catch (e) { /* noop */ }
       try { fs.unlinkSync(path.join(UPLOAD_DIR, f.filename + '.thumb.jpg')); } catch (e) { /* noop */ }
     }
@@ -115,7 +119,8 @@ function checkMediaSizes(req) {
 // Responde el motivo de la falla: JSON para subida con progreso (XHR), flash+redirect para POST clásico.
 function uploadFail(req, res, err, fallback) {
   let msg;
-  if (err && err.code === 'LIMIT_FILE_SIZE') msg = req.t('upload_too_large_generic');
+  if (err && /^MEDIA_/.test(err.code || '')) msg = mediaErrorMessage(err, req.lang);
+  else if (err && err.code === 'LIMIT_FILE_SIZE') msg = req.t('upload_too_large_generic');
   else if (err && /^toobig:/.test(err.message || '')) {
     const max = /toobig:document/.test(err.message) ? DOC_MAX_MB : MEDIA_MAX_MB;
     msg = req.t('upload_too_large', { max });
@@ -150,50 +155,45 @@ function personIds(body) {
 // Descarga en segundo plano el video de una URL y lo adjunta al recuerdo.
 // No bloquea la respuesta: el recuerdo queda con video_dl_status='pending'
 // hasta que termina ('ready') o falla ('error', con el motivo en video_dl_error).
+async function attachDownloadedMedia(memoryId, url, kind, download) {
+  let source, converted;
+  const column = kind === 'photo' ? 'photo' : 'video';
+  try {
+    const result = await download();
+    if (!result.ok) throw new Error(result.error || 'download-failed');
+    source = path.join(UPLOAD_DIR, result.filename);
+    converted = await normalizeMedia(source, kind);
+    const r = await db.query(
+      `UPDATE memories SET ${column}_path=$1, ${column}_dl_status='ready', ${column}_dl_error=NULL, updated_at=now() WHERE id=$2 AND ${column}_url=$3 AND ${column}_dl_status='pending'`,
+      ['/uploads/' + converted.filename, memoryId, url]);
+    if (!r.rowCount) {
+      await fs.promises.rm(converted.path, { force: true });
+      await fs.promises.rm(source, { force: true });
+    } else if (kind === 'video') ensureVideoThumb(converted.path);
+  } catch (e) {
+    if (converted) await fs.promises.rm(converted.path, { force: true }).catch(() => {});
+    if (source) await fs.promises.rm(source, { force: true }).catch(() => {});
+    await db.query(
+      `UPDATE memories SET ${column}_dl_status='error', ${column}_dl_error=$1, updated_at=now() WHERE id=$2 AND ${column}_url=$3 AND ${column}_dl_status='pending'`,
+      [/^MEDIA_/.test(e.code || '') ? mediaErrorMessage(e, 'es') : String(e.message).slice(0, 500), memoryId, url]);
+  }
+}
 function queueVideoDownload(memoryId, url) {
   if (!url || !isSupportedVideoUrl(url)) return;
-  (async () => {
-    const fname = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.mp4';
-    const dest = path.join(UPLOAD_DIR, fname);
+  attachDownloadedMedia(memoryId, url, 'video', async () => {
+    const filename = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.mp4';
+    const dest = path.join(UPLOAD_DIR, filename);
     const r = await downloadVideoUrl(url, dest);
-    if (r.ok) {
-      await db.query(
-        `UPDATE memories SET video_path=$1, video_dl_status='ready', video_dl_error=NULL, updated_at=now() WHERE id=$2`,
-        ['/uploads/' + fname, memoryId]
-      );
-      ensureVideoThumb(dest);
-    } else {
-      try { fs.unlinkSync(dest); } catch (e) { /* noop */ }
-      await db.query(
-        `UPDATE memories SET video_dl_status='error', video_dl_error=$1, updated_at=now() WHERE id=$2`,
-        [String(r.error || 'download-failed').slice(0, 500), memoryId]
-      );
-    }
-  })().catch((e) => console.error('[video-url]', e.message));
+    if (!r.ok) await fs.promises.rm(dest, { force: true }).catch(() => {});
+    return { ...r, filename };
+  }).catch(e => console.error('[video-url]', e.message));
 }
-
-// Descarga en segundo plano la foto de una URL y la adjunta al recuerdo.
-// Los posts de Instagram (/p/, /reel/) se resuelven con yt-dlp; las URLs
-// directas de imagen se descargan por HTTP (content-type image/*).
 function queueImageDownload(memoryId, url) {
   if (!url || !isSupportedImageUrl(url)) return;
-  (async () => {
+  attachDownloadedMedia(memoryId, url, 'photo', () => {
     const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
-    const r = host === 'instagram.com'
-      ? await downloadInstagramImage(url, UPLOAD_DIR)
-      : await downloadImageUrl(url, UPLOAD_DIR);
-    if (r.ok) {
-      await db.query(
-        `UPDATE memories SET photo_path=$1, photo_dl_status='ready', photo_dl_error=NULL, updated_at=now() WHERE id=$2`,
-        ['/uploads/' + r.filename, memoryId]
-      );
-    } else {
-      await db.query(
-        `UPDATE memories SET photo_dl_status='error', photo_dl_error=$1, updated_at=now() WHERE id=$2`,
-        [String(r.error || 'download-failed').slice(0, 500), memoryId]
-      );
-    }
-  })().catch((e) => console.error('[photo-url]', e.message));
+    return host === 'instagram.com' ? downloadInstagramImage(url, UPLOAD_DIR) : downloadImageUrl(url, UPLOAD_DIR);
+  }).catch(e => console.error('[photo-url]', e.message));
 }
 
 // Valida la URL de video del formulario; responde 400 si el host no es válido.
@@ -251,12 +251,14 @@ router.get('/new', canWrite, async (req, res) => {
 });
 
 router.post('/', canWrite, (req, res, next) => {
-  fields(req, res, (err) => {
+  fields(req, res, async (err) => {
     if (err) return uploadFail(req, res, err, `/families/${req.family.id}/memories/new`);
     const sizeErr = checkMediaSizes(req);
     if (sizeErr) return uploadFail(req, res, sizeErr, `/families/${req.family.id}/memories/new`);
     if (checkVideoUrl(req, res, `/families/${req.family.id}/memories/new`)) return;
     if (checkPhotoUrl(req, res, `/families/${req.family.id}/memories/new`)) return;
+    try { await normalizeUploads(req.files, UPLOAD_DIR); }
+    catch (conversionError) { return uploadFail(req, res, conversionError, `/families/${req.family.id}/memories/${req.params.mid ? req.params.mid + '/edit' : 'new'}`); }
     next();
   });
 }, async (req, res, next) => {
@@ -347,12 +349,14 @@ router.get('/:mid/edit', canWrite, async (req, res) => {
 });
 
 router.post('/:mid', canWrite, (req, res, next) => {
-  fields(req, res, (err) => {
+  fields(req, res, async (err) => {
     if (err) return uploadFail(req, res, err, `/families/${req.family.id}/memories/${req.params.mid}/edit`);
     const sizeErr = checkMediaSizes(req);
     if (sizeErr) return uploadFail(req, res, sizeErr, `/families/${req.family.id}/memories/${req.params.mid}/edit`);
     if (checkVideoUrl(req, res, `/families/${req.family.id}/memories/${req.params.mid}/edit`)) return;
     if (checkPhotoUrl(req, res, `/families/${req.family.id}/memories/${req.params.mid}/edit`)) return;
+    try { await normalizeUploads(req.files, UPLOAD_DIR); }
+    catch (conversionError) { return uploadFail(req, res, conversionError, `/families/${req.family.id}/memories/${req.params.mid ? req.params.mid + '/edit' : 'new'}`); }
     next();
   });
 }, async (req, res, next) => {
@@ -361,6 +365,21 @@ router.post('/:mid', canWrite, (req, res, next) => {
   const { rows } = await db.query('SELECT * FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const old = rows[0];
+  const uploadedKinds = new Set(Object.keys(req.files || {}));
+  // Saving an existing memory repairs legacy, unconverted media too.
+  try {
+    req.files = req.files || {};
+    for (const kind of ['photo', 'video', 'audio']) {
+      const stored = old[kind + '_path'];
+      const suffix = kind === 'photo' ? '.view.jpg' : kind === 'video' ? '.view.mp4' : '.view.mp3';
+      if (req.files[kind] || !stored || stored.endsWith(suffix)) continue;
+      const source = path.join(UPLOAD_DIR, path.basename(stored));
+      const converted = await normalizeMedia(source, kind);
+      req.files[kind] = [{ ...converted, preserveSource: true }];
+    }
+  } catch (e) {
+    return uploadFail(req, res, e, `/families/${req.family.id}/memories/${mid}/edit`);
+  }
   const b = req.body;
   // Instantánea de la versión anterior
   await db.query('INSERT INTO memory_versions (memory_id, data, created_by) VALUES ($1,$2,$3)',
@@ -423,9 +442,9 @@ router.post('/:mid', canWrite, (req, res, next) => {
     ensureVideoThumb(path.join(UPLOAD_DIR, path.basename(video)));
   }
   // Nueva URL de video: descargar en segundo plano.
-  if (videoUrl && urlChanged && !req.files.video) queueVideoDownload(mid, videoUrl);
+  if (videoUrl && urlChanged && !uploadedKinds.has('video')) queueVideoDownload(mid, videoUrl);
   // Nueva URL de foto: descargar en segundo plano.
-  if (photoUrl && photoUrlChanged && !req.files.photo) queueImageDownload(mid, photoUrl);
+  if (photoUrl && photoUrlChanged && !uploadedKinds.has('photo')) queueImageDownload(mid, photoUrl);
   if (isXhr(req)) return res.json({ ok: true, redirect: doneEditUrl });
   req.session.flash = req.t('memory_updated');
   res.redirect(doneEditUrl);
@@ -460,3 +479,4 @@ module.exports = router;
 // Para reanudar descargas pendientes al arrancar (server.js).
 module.exports.queueVideoDownload = queueVideoDownload;
 module.exports.queueImageDownload = queueImageDownload;
+

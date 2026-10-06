@@ -7,4 +7,5 @@
 # (los que salen en el plan de build). Las fases install (npm ci) y start
 # (node server.js) se mantienen del proveedor.
 [phases.setup]
-nixPkgs = ["nodejs_24", "npm-9_x", "python3"]
+nixPkgs = ["nodejs_24", "npm-9_x", "python3", "libraw", "imagemagick"]
+
