@@ -1,10 +1,7 @@
 <%- include('view-inc-familytabs', { tab: 'workshop' }) %>
 <h1><%= album ? t('edit_album') : t('new_album') %></h1>
 <div class="card">
-<form method="post" action="<%= formAction || ('/families/' + family.id + '/workshop') %>" id="albumForm"
-  data-language="<%= lang %>"
-  data-draft-user="<%= user.id %>"
-  data-messages="<%= JSON.stringify({ titlePh: t('story_title_ph'), textPh: t('story_text_ph'), up: t('move_up'), down: t('move_down'), del: t('delete'), empty: lang === 'en' ? 'Select at least one memory or add a story.' : 'Selecciona al menos un recuerdo o agrega una historia.', failed: lang === 'en' ? 'The album could not be saved. Your title, narrative and selection are still here. Please try again.' : 'No se pudo guardar el álbum. Tu título, narrativa y selección se conservan aquí. Inténtalo de nuevo.', saving: lang === 'en' ? 'Saving album…' : 'Guardando álbum…', restored: lang === 'en' ? 'Your unfinished album has been restored.' : 'Se recuperó tu álbum sin terminar.', selected: lang === 'en' ? 'Selected memories: ' : 'Recuerdos seleccionados: ' }) %>">
+<form method="post" action="<%= formAction || ('/families/' + family.id + '/workshop') %>" id="albumForm">
   <input type="hidden" name="blocks" id="blocksJson" value="">
   <label><%= t('album_title') %> *<input name="title" required maxlength="200" placeholder="<%= t('album_hint') %>" value="<%= album ? album.title : '' %>"></label>
   <label><%= t('album_narrative') %> <span class="muted small">(<%= t('optional') %>)</span>
@@ -48,22 +45,6 @@
 
   <p class="muted small"><%= t('album_blocks_hint') %></p>
   <p><button type="button" class="btn small" id="btnAddStoryTop">📖 <%= t('add_story') %></button></p>
-
-  <div id="moveBar" class="move-bar" role="group" aria-label="<%= lang === 'en' ? 'Move panels' : 'Mover paneles' %>">
-    <div class="move-toolbar">
-      <strong id="moveCount" aria-live="polite"></strong>
-      <button type="button" class="btn tiny ghost" id="selectMove"><%= lang === 'en' ? 'Mark visible panels' : 'Marcar paneles visibles' %></button>
-      <button type="button" class="btn tiny ghost" id="clearMove"><%= lang === 'en' ? 'Clear marks' : 'Quitar marcas' %></button>
-      <button type="button" class="btn tiny ghost" data-group-move="start"><%= lang === 'en' ? 'To start' : 'Al inicio' %></button>
-      <button type="button" class="btn tiny ghost" data-group-move="up"><%= lang === 'en' ? '↑ Up' : '↑ Subir' %></button>
-      <button type="button" class="btn tiny ghost" data-group-move="down"><%= lang === 'en' ? '↓ Down' : '↓ Bajar' %></button>
-      <button type="button" class="btn tiny ghost" data-group-move="end"><%= lang === 'en' ? 'To end' : 'Al final' %></button>
-      <label class="move-position"><%= lang === 'en' ? 'Position' : 'Posición' %> <input type="text" id="movePosition" value="1" inputmode="numeric"></label>
-      <button type="button" class="btn tiny ghost" data-group-move="position"><%= lang === 'en' ? 'Move here' : 'Mover aquí' %></button>
-    </div>
-    <div id="moveNotice" class="small" role="status" aria-live="polite"></div>
-  </div>
-  <p class="muted small"><%= lang === 'en' ? 'Tick Move on the panels you want to move together, even if they are not adjacent. Drag any marked handle ⋮⋮; hold it near the top or bottom edge to scroll. Escape cancels the drag. These marks do not change what is included in the album. Save the album to keep the new order.' : 'Marca Mover en los paneles que quieras mover juntos, aunque no sean consecutivos. Arrastra cualquiera de sus asas ⋮⋮ y mantenla cerca del borde superior o inferior para desplazar la página. Escape cancela el arrastre. Estas marcas no cambian qué recuerdos se incluyen en el álbum. Guarda el álbum para conservar el nuevo orden.' %></p>
   <div class="picks" id="pickList">
   <% picks.forEach(function(pk, i) {
        if (pk.kind === 'story') { %>
@@ -112,44 +93,21 @@
      }); %>
   </div>
   <% if (!memories.length) { %><p class="muted"><%= t('no_memories') %></p><% } %>
-  <p id="selectionCount" class="muted small" aria-live="polite"></p>
-  <p id="albumStatus" role="status" aria-live="polite"></p>
   <p><button class="btn" type="submit"><%= submitLabel || t('create_album') %></button>
   <a class="btn ghost" href="<%= album ? ('/families/' + family.id + '/workshop/' + album.id) : ('/families/' + family.id + '/workshop') %>"><%= t('cancel') %></a></p>
 </form>
 </div>
-
-<style>
-#albumForm .move-bar { position: sticky; top: 0; z-index: 20; background: #fff; border: 1px solid #8fa9bb; border-radius: 8px; padding: .65rem; box-shadow: 0 2px 7px #0002; }
-#albumForm .move-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
-#albumForm .move-toolbar button { min-height: 36px; }
-#albumForm .move-position { display: flex; align-items: center; gap: .3rem; margin: 0; font-size: .85rem; }
-#albumForm .move-position input { width: 4.5rem; margin: 0; }
-#albumForm .move-choice { display: flex; flex: 0 0 auto; flex-direction: column; align-items: center; gap: .25rem; font-size: .75rem; margin: 0; cursor: pointer; }
-#albumForm .move-check { width: 20px; height: 20px; margin: 0; }
-#albumForm .pick.move-selected { background: #edf6ff; outline: 2px solid #397cb0; outline-offset: -2px; }
-#albumForm .drag-handle { padding: 14px 7px; touch-action: none; flex-shrink: 0; }
-#albumForm .picklabel, #albumForm .storyedit { min-width: 0; overflow-wrap: anywhere; }
-#albumForm .move-marker { height: 6px; background: #1966b2; border-radius: 3px; pointer-events: none; }
-.move-badge { position: fixed; z-index: 9999; max-width: 250px; padding: 9px 12px; background: #164c78; color: white; border-radius: 8px; pointer-events: none; font-size: 14px; }
-body.album-moving { user-select: none; cursor: grabbing; }
-@media (max-width: 600px) {
-  #albumForm .pick { gap: .3rem; padding: .4rem; flex-wrap: wrap; }
-  #albumForm .pickthumb { width: 40px; height: 40px; flex-basis: 40px; }
-  #albumForm .picklabel, #albumForm .storyedit { flex: 1 1 110px; }
-  #albumForm .pickmove { flex-direction: row; margin-left: auto; }
-  #albumForm .move-bar { padding: .4rem; }
-}
-</style>
 <script>
 (function () {
   var list = document.getElementById('pickList');
   if (!list) return;
-  var form = document.getElementById('albumForm');
-  var T = JSON.parse(form.getAttribute('data-messages'));
-  var status = document.getElementById('albumStatus');
-  var draftKey = 'legado-album:' + form.getAttribute('data-draft-user') + ':' + form.getAttribute('action');
-  var saving = false;
+  var T = {
+    titlePh: <%= JSON.stringify(t('story_title_ph')) %>,
+    textPh: <%= JSON.stringify(t('story_text_ph')) %>,
+    up: <%= JSON.stringify(t('move_up')) %>,
+    down: <%= JSON.stringify(t('move_down')) %>,
+    del: <%= JSON.stringify(t('delete')) %>
+  };
   var fFrom = document.getElementById('fFrom'), fTo = document.getElementById('fTo'),
       fKw = document.getElementById('fKw'), fPeople = document.getElementById('fPeople'),
       countLabel = document.getElementById('countLabel');
@@ -179,7 +137,6 @@ body.album-moving { user-select: none; cursor: grabbing; }
     });
     countLabel.textContent = countLabel.getAttribute('data-pattern')
       .replace('{shown}', shown).replace('{total}', total);
-    if (moveBar) updateMoveSelection();
   }
   ['input', 'change'].forEach(function (ev) {
     fFrom.addEventListener(ev, applyFilters);
@@ -200,7 +157,6 @@ body.album-moving { user-select: none; cursor: grabbing; }
     memItems().forEach(function (it) {
       if (it.style.display !== 'none') it.querySelector('.pickcheck').checked = true;
     });
-    saveDraft();
   });
 
   function renumber() {
@@ -209,8 +165,6 @@ body.album-moving { user-select: none; cursor: grabbing; }
       n++;
       it.querySelector('.pick-num').textContent = n;
     });
-    initMoveControls();
-    saveDraft();
   }
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -240,199 +194,45 @@ body.album-moving { user-select: none; cursor: grabbing; }
   }
   document.getElementById('btnAddStoryTop').addEventListener('click', function () { addStory(null); });
 
-  // Selection for moving is independent of inclusion in the album.
-  var moveBar = document.getElementById('moveBar');
-  var moveCount = document.getElementById('moveCount');
-  var drag = null;
-  var isEnglish = form.getAttribute('data-language') === 'en';
-  function words(es, en) { return isEnglish ? en : es; }
-  function allRows() { return Array.from(list.querySelectorAll('.pick')); }
-  function visibleRows() { return allRows().filter(function (it) { return it.style.display !== 'none'; }); }
-  function movingRows() { return visibleRows().filter(function (it) { return it.classList.contains('move-selected'); }); }
-  function initMoveControls() {
-    allRows().forEach(function (it) {
-      var handle = it.querySelector('.drag-handle');
-      handle.draggable = false;
-      handle.title = words('Arrastra para mover el panel o el grupo marcado', 'Drag to move this panel or the marked group');
-      if (it.querySelector('.move-check')) return;
-      var label = document.createElement('label');
-      label.className = 'move-choice';
-      var cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.className = 'move-check';
-      label.appendChild(cb);
-      label.appendChild(document.createTextNode(words('Mover', 'Move')));
-      it.insertBefore(label, handle);
-    });
-    updateMoveSelection();
-  }
-  function updateMoveSelection() {
-    allRows().forEach(function (it) {
-      var cb = it.querySelector('.move-check');
-      if (!cb) return;
-      if (it.style.display === 'none') cb.checked = false;
-      it.classList.toggle('move-selected', cb.checked);
-      cb.setAttribute('aria-label', words('Marcar para mover el panel ', 'Mark panel to move: ') + it.querySelector('.pick-num').textContent);
-    });
-    var n = movingRows().length;
-    moveCount.textContent = words('Paneles para mover: ', 'Panels to move: ') + n;
-    moveBar.querySelectorAll('[data-group-move], #clearMove').forEach(function (b) { b.disabled = !n; });
-    document.getElementById('movePosition').max = Math.max(1, allRows().length - n + 1);
-  }
-  list.addEventListener('change', function (e) {
-    if (e.target.matches('.move-check')) updateMoveSelection();
+  // Arrastrar desde el asa ⋮⋮
+  var dragEl = null;
+  list.addEventListener('dragstart', function (e) {
+    var h = e.target.closest('.drag-handle'); if (!h) { e.preventDefault(); return; }
+    dragEl = h.closest('.pick');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', 'x'); } catch (err) {}
+    dragEl.classList.add('dragging');
   });
-  document.getElementById('selectMove').addEventListener('click', function () {
-    visibleRows().forEach(function (it) { it.querySelector('.move-check').checked = true; });
-    updateMoveSelection();
+  list.addEventListener('dragend', function () {
+    if (dragEl) dragEl.classList.remove('dragging');
+    dragEl = null; renumber();
   });
-  document.getElementById('clearMove').addEventListener('click', function () {
-    allRows().forEach(function (it) { it.querySelector('.move-check').checked = false; });
-    updateMoveSelection();
-  });
-  document.getElementById('movePosition').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      moveBar.querySelector('[data-group-move="position"]').click();
-    }
-  });
-  function insertGroup(rows, before) {
-    var frag = document.createDocumentFragment();
-    rows.forEach(function (it) { frag.appendChild(it); });
-    list.insertBefore(frag, before);
-  }
-  function stepGroup(rows, dir) {
-    var visible = visibleRows();
-    var order = dir < 0 ? rows : rows.slice().reverse();
-    order.forEach(function (it) {
-      var i = visible.indexOf(it), other = visible[i + dir];
-      if (!other || rows.indexOf(other) !== -1) return;
-      if (dir < 0) list.insertBefore(it, other);
-      else list.insertBefore(it, other.nextSibling);
-      visible = visibleRows();
-    });
-  }
-  function finishMove(n) {
-    renumber();
-    updateMoveSelection();
-    document.getElementById('moveNotice').textContent = words('Paneles reordenados: ', 'Panels reordered: ') + n;
-  }
-  moveBar.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-group-move]');
-    if (!b) return;
-    var rows = movingRows(); if (!rows.length) return;
-    var action = b.getAttribute('data-group-move');
-    var remaining = allRows().filter(function (it) { return rows.indexOf(it) === -1; });
-    if (action === 'up' || action === 'down') stepGroup(rows, action === 'up' ? -1 : 1);
-    else if (action === 'start') insertGroup(rows, remaining[0] || null);
-    else if (action === 'end') insertGroup(rows, null);
-    else {
-      var input = document.getElementById('movePosition');
-      var position = Number(input.value);
-      if (!Number.isInteger(position) || position < 1 || position > remaining.length + 1) {
-        document.getElementById('moveNotice').textContent = words('Indica una posición entre 1 y ', 'Enter a position between 1 and ') + (remaining.length + 1);
-        input.focus(); return;
-      }
-      insertGroup(rows, remaining[position - 1] || null);
-    }
-    finishMove(rows.length);
-  });
-
-  // Pointer capture supports mouse, pen and touch. Rows are committed only on drop.
-  list.addEventListener('dragstart', function (e) { e.preventDefault(); });
-  list.addEventListener('pointerdown', function (e) {
-    var handle = e.target.closest('.drag-handle');
-    if (!handle || e.button !== 0 || drag) return;
-    var row = handle.closest('.pick');
-    drag = { id: e.pointerId, handle: handle, row: row, startX: e.clientX, startY: e.clientY,
-      x: e.clientX, y: e.clientY, active: false, frame: 0, time: 0 };
-    handle.setPointerCapture(e.pointerId);
+  list.addEventListener('dragover', function (e) {
+    if (!dragEl) return;
     e.preventDefault();
+    var after = null;
+    var els = list.querySelectorAll('.pick:not(.dragging)');
+    for (var i = 0; i < els.length; i++) {
+      var r = els[i].getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) { after = els[i]; break; }
+    }
+    if (after) list.insertBefore(dragEl, after); else list.appendChild(dragEl);
   });
-  function beginDrag() {
-    if (!drag.row.classList.contains('move-selected')) {
-      allRows().forEach(function (it) { it.querySelector('.move-check').checked = it === drag.row; });
-      updateMoveSelection();
-    }
-    drag.rows = movingRows();
-    drag.active = true;
-    drag.rows.forEach(function (it) { it.classList.add('dragging'); });
-    drag.marker = document.createElement('div');
-    drag.marker.className = 'move-marker';
-    drag.marker.setAttribute('aria-hidden', 'true');
-    drag.badge = document.createElement('div');
-    drag.badge.className = 'move-badge';
-    drag.badge.textContent = drag.rows.length + words(' panel(es) · suelta para mover', ' panel(s) · release to move');
-    document.body.appendChild(drag.badge);
-    document.body.classList.add('album-moving');
-    drag.frame = requestAnimationFrame(dragFrame);
-  }
-  function updateDropTarget() {
-    var others = visibleRows().filter(function (it) { return drag.rows.indexOf(it) === -1; });
-    var before = others.find(function (it) {
-      var rect = it.getBoundingClientRect();
-      return drag.y < rect.top + rect.height / 2;
-    }) || null;
-    // Avoid repeatedly detaching the marker when the target did not change.
-    if (!drag.marker.parentNode || drag.before !== before) list.insertBefore(drag.marker, before);
-    drag.before = before;
-    drag.badge.style.top = Math.min(Math.max(8, drag.y + 18), window.innerHeight - 55) + 'px';
-    drag.badge.style.left = Math.max(8, Math.min(drag.x + 16, window.innerWidth - 260)) + 'px';
-  }
-  function scrollVelocity(y, top, bottom) {
-    var edge = Math.min(100, (bottom - top) / 3);
-    if (y < top + edge) return -900 * Math.min(1, Math.max(0, (top + edge - y) / edge));
-    if (y > bottom - edge) return 900 * Math.min(1, Math.max(0, (y - bottom + edge) / edge));
-    return 0;
-  }
-  function dragFrame(time) {
-    if (!drag || !drag.active) return;
-    var dt = drag.time ? Math.min(40, time - drag.time) / 1000 : 1 / 60;
-    drag.time = time;
-    var barRect = moveBar.getBoundingClientRect();
-    var top = barRect.top <= 1 && barRect.bottom > 0 ? barRect.bottom : 0;
-    window.scrollBy(0, scrollVelocity(drag.y, top, window.innerHeight) * dt);
-    updateDropTarget();
-    drag.frame = requestAnimationFrame(dragFrame);
-  }
-  document.addEventListener('pointermove', function (e) {
-    if (!drag || e.pointerId !== drag.id) return;
-    drag.x = e.clientX; drag.y = e.clientY;
-    if (!drag.active && Math.hypot(drag.x - drag.startX, drag.y - drag.startY) >= 6) beginDrag();
-    if (drag.active) { e.preventDefault(); updateDropTarget(); }
-  }, { passive: false });
-  function endDrag(commit) {
-    if (!drag) return;
-    var current = drag; drag = null;
-    cancelAnimationFrame(current.frame);
-    if (current.active) {
-      if (commit) insertGroup(current.rows, current.marker);
-      current.marker.remove(); current.badge.remove();
-      current.rows.forEach(function (it) { it.classList.remove('dragging'); });
-      document.body.classList.remove('album-moving');
-      if (commit) finishMove(current.rows.length);
-    }
-    if (current.handle.hasPointerCapture(current.id)) current.handle.releasePointerCapture(current.id);
-  }
-  document.addEventListener('pointerup', function (e) { if (drag && e.pointerId === drag.id) endDrag(true); });
-  document.addEventListener('pointercancel', function (e) { if (drag && e.pointerId === drag.id) endDrag(false); });
-  list.addEventListener('lostpointercapture', function (e) { if (drag && e.pointerId === drag.id) endDrag(false); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && drag) { endDrag(false); e.preventDefault(); } });
-  window.addEventListener('blur', function () { endDrag(false); });
-
+  // Botones ↑ ↓ ✕ ＋📖 (funcionan también en táctil)
   list.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
     var it = b.closest('.pick');
     if (b.hasAttribute('data-move')) {
-      var rows = it.classList.contains('move-selected') ? movingRows() : [it];
-      stepGroup(rows, Number(b.getAttribute('data-move')));
-      finishMove(rows.length);
+      var dir = parseInt(b.getAttribute('data-move'), 10);
+      if (dir < 0 && it.previousElementSibling) list.insertBefore(it, it.previousElementSibling);
+      if (dir > 0 && it.nextElementSibling) list.insertBefore(it.nextElementSibling, it);
+      renumber();
     } else if (b.hasAttribute('data-del-story')) {
       it.remove(); renumber();
     } else if (b.hasAttribute('data-add-story')) {
       addStory(it);
     }
   });
-
   document.getElementById('btnSortDate').addEventListener('click', function () {
     // Ordena los recuerdos por fecha; las historias se quedan en su posición.
     var mems = memItems();
@@ -449,9 +249,8 @@ body.album-moving { user-select: none; cursor: grabbing; }
     list.appendChild(frag);
     renumber();
   });
-  // Recorre todas las tarjetas en su orden; incluye solo las marcadas,
-  // también cuando no son consecutivas o están ocultas por un filtro.
-  function collectBlocks() {
+  // Al enviar: serializa los bloques en orden
+  document.getElementById('albumForm').addEventListener('submit', function () {
     var blocks = [];
     Array.prototype.forEach.call(list.querySelectorAll('.pick'), function (it) {
       if (it.classList.contains('story')) {
@@ -463,77 +262,8 @@ body.album-moving { user-select: none; cursor: grabbing; }
         if (cb && cb.checked) blocks.push({ type: 'memory', id: parseInt(cb.value, 10) });
       }
     });
-    return blocks;
-  }
-  function saveDraft() {
-    var blocks = collectBlocks();
     document.getElementById('blocksJson').value = JSON.stringify(blocks);
-    document.getElementById('selectionCount').textContent = T.selected + blocks.filter(function (b) { return b.type === 'memory'; }).length;
-    try {
-      sessionStorage.setItem(draftKey, JSON.stringify({
-        title: form.elements.title.value, narrative: form.elements.narrative.value,
-        theme: form.elements.theme.value, blocks: blocks
-      }));
-    } catch (err) { /* El formulario sigue funcionando sin almacenamiento local. */ }
-  }
-  function restoreDraft() {
-    try {
-      var draft = JSON.parse(sessionStorage.getItem(draftKey) || 'null');
-      if (!draft || !Array.isArray(draft.blocks)) return;
-      form.elements.title.value = draft.title || '';
-      form.elements.narrative.value = draft.narrative || '';
-      form.elements.theme.value = draft.theme || 'general';
-      var byId = new Map();
-      memItems().forEach(function (it) {
-        it.querySelector('.pickcheck').checked = false;
-        byId.set(Number(it.getAttribute('data-id')), it);
-      });
-      list.querySelectorAll('.story').forEach(function (it) { it.remove(); });
-      draft.blocks.forEach(function (b) {
-        if (b.type === 'story') list.appendChild(storyNode(b.title, b.text));
-        else if (byId.has(Number(b.id))) {
-          var it = byId.get(Number(b.id));
-          it.querySelector('.pickcheck').checked = true;
-          list.appendChild(it);
-          byId.delete(Number(b.id));
-        }
-      });
-      byId.forEach(function (it) { list.appendChild(it); });
-      status.textContent = T.restored;
-      renumber();
-    } catch (err) { /* Ignora un borrador inválido. */ }
-  }
-  form.addEventListener('input', saveDraft);
-  form.addEventListener('change', saveDraft);
-  form.addEventListener('submit', async function (event) {
-    event.preventDefault();
-    if (saving) return;
-    saveDraft();
-    if (!collectBlocks().length) { status.textContent = T.empty; return; }
-    saving = true;
-    var submit = form.querySelector('[type="submit"]');
-    submit.disabled = true;
-    status.textContent = T.saving;
-    try {
-      var response = await fetch(form.action, {
-        method: 'POST', credentials: 'same-origin',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(new FormData(form)).toString()
-      });
-      var result = await response.json();
-      if (!response.ok || !result.ok || !result.redirect) throw new Error('Album save failed');
-      try { sessionStorage.removeItem(draftKey); } catch (err) {}
-      window.location.assign(result.redirect);
-    } catch (err) {
-      status.textContent = T.failed;
-      saving = false;
-      submit.disabled = false;
-    }
   });
-  initMoveControls();
-  restoreDraft();
   applyFilters();
-  saveDraft();
 })();
 </script>
-

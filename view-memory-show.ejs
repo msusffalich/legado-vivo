@@ -18,7 +18,19 @@
 <div class="card">
   <p class="muted small"><%= fmtMemDate(memory) %><% if (memory.place) { %> · <%= memory.place %><% } %>
     <% if (author) { %> · <%= t('memory_by', { name: author }) %><% } %></p>
-  <% if (memory.photo_path) { %><img class="bigimg" src="<%= memory.photo_path %>" alt="">
+  <% if (memory.photos && memory.photos.length) { %>
+    <img class="bigimg" src="<%= memory.photos[0].photo_path %>" alt="">
+    <% if (memory.photos.length > 1) { %>
+      <div class="gallery">
+      <% memory.photos.slice(1).forEach(function(ph) { %>
+        <a href="<%= ph.photo_path %>" target="_blank" rel="noopener"><img class="thumb" src="<%= ph.photo_path %>" alt=""></a>
+      <% }); %>
+      </div>
+    <% } %>
+    <% if (canWrite) { %><p><a class="btn ghost small" href="/families/<%= family.id %>/memories/<%= memory.id %>/art">🎨 <%= t('art_editor_title') %></a></p><% } %>
+    <% if (memory.photo_url) { %><p class="muted small"><%= t('video_source') %>: <a href="<%= memory.photo_url %>" target="_blank" rel="noopener"><%= memory.photo_url %></a></p><% } %>
+  <% } else if (memory.photo_path) { %><img class="bigimg" src="<%= memory.photo_path %>" alt="">
+    <% if (canWrite) { %><p><a class="btn ghost small" href="/families/<%= family.id %>/memories/<%= memory.id %>/art">🎨 <%= t('art_editor_title') %></a></p><% } %>
     <% if (memory.photo_url) { %><p class="muted small"><%= t('video_source') %>: <a href="<%= memory.photo_url %>" target="_blank" rel="noopener"><%= memory.photo_url %></a></p><% } %>
   <% } else if (memory.photo_url && memory.photo_dl_status === 'pending') { %>
     <p class="flash">⏳ <%= t('photo_downloading') %></p>

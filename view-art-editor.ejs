@@ -1,0 +1,101 @@
+<%- include('view-inc-familytabs', { tab: 'memories' }) %>
+<h1><%= t('art_editor_title') %></h1>
+<p class="muted"><%= t('art_hint') %></p>
+<div class="card">
+  <h3><%= t('art_choose_photo') %></h3>
+  <div class="previews" id="art-sources">
+    <% (photos || []).forEach(function(ph, i) { %>
+      <div class="preview pick" data-src="<%= ph.photo_path %>" data-pick="<%= i %>">
+        <img src="<%= ph.photo_path %>" alt="">
+      </div>
+    <% }); %>
+  </div>
+  <p class="muted small"><%= t('art_upload_new') %>: <input type="file" id="art-upload" accept="image/*"></p>
+  <img id="art-source" style="display:none" alt="">
+
+  <h3><%= t('art_choose_style') %></h3>
+  <div class="stylebtns">
+    <button type="button" class="btn ghost stylebtn" data-style="charcoal">✏️ <%= t('art_style_charcoal') %></button>
+    <button type="button" class="btn ghost stylebtn" data-style="popart">🎨 <%= t('art_style_popart') %></button>
+    <button type="button" class="btn ghost stylebtn" data-style="caricature">🖊️ <%= t('art_style_caricature') %></button>
+    <button type="button" class="btn ghost stylebtn" data-style="watercolor">🖌️ <%= t('art_style_watercolor') %></button>
+  </div>
+
+  <div class="art-stage">
+    <canvas id="art-canvas"></canvas>
+    <p class="muted" id="art-empty"><%= t('art_need_photo') %></p>
+  </div>
+
+  <p>
+    <button type="button" class="btn" id="art-save" disabled><%= t('art_save') %></button>
+    <a class="btn ghost" href="/families/<%= family.id %>/memories/<%= memory.id %>"><%= t('cancel') %></a>
+    <span class="muted small" id="art-status"></span>
+  </p>
+</div>
+<script src="/assets/art.js"></script>
+<script>
+(function () {
+  var src = document.getElementById('art-source');
+  var canvas = document.getElementById('art-canvas');
+  var empty = document.getElementById('art-empty');
+  var saveBtn = document.getElementById('art-save');
+  var status = document.getElementById('art-status');
+  var style = null, hasRender = false;
+  var MID = <%= memory.id %>, FID = <%= family.id %>;
+
+  function pick(url, box) {
+    document.querySelectorAll('#art-sources .pick').forEach(function (el) { el.classList.remove('sel'); });
+    if (box) box.classList.add('sel');
+    src.onload = function () { style = null; hasRender = false; empty.style.display = ''; saveBtn.disabled = true; markStyles(); };
+    src.src = url;
+  }
+  document.querySelectorAll('#art-sources .pick').forEach(function (box) {
+    box.addEventListener('click', function () { pick(box.getAttribute('data-src'), box); });
+  });
+  var first = document.querySelector('#art-sources .pick');
+  if (first) pick(first.getAttribute('data-src'), first);
+
+  document.getElementById('art-upload').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    pick(URL.createObjectURL(f), null);
+  });
+
+  function markStyles() {
+    document.querySelectorAll('.stylebtn').forEach(function (b) {
+      b.classList.toggle('sel', b.getAttribute('data-style') === style);
+    });
+  }
+  document.querySelectorAll('.stylebtn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!src.src) { status.textContent = '<%= t('art_need_photo') %>'; return; }
+      style = b.getAttribute('data-style');
+      if (window.LVArt.applyToCanvas(canvas, style)) {
+        hasRender = true;
+        empty.style.display = 'none';
+        saveBtn.disabled = false;
+        status.textContent = '';
+      }
+      markStyles();
+    });
+  });
+
+  saveBtn.addEventListener('click', function () {
+    if (!hasRender) return;
+    saveBtn.disabled = true;
+    status.textContent = '<%= t('uploading') %>';
+    canvas.toBlob(function (blob) {
+      if (!blob) { status.textContent = '<%= t('error_generic') %>'; saveBtn.disabled = false; return; }
+      var fd = new FormData();
+      fd.append('artphoto', blob, 'estilo-' + style + '.jpg');
+      fetch('/families/' + FID + '/memories/' + MID + '/art-photo', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (j && j.ok) { window.location.href = '/families/' + FID + '/memories/' + MID; }
+          else { status.textContent = (j && j.error) || '<%= t('error_generic') %>'; saveBtn.disabled = false; }
+        })
+        .catch(function () { status.textContent = '<%= t('upload_connection_error') %>'; saveBtn.disabled = false; });
+    }, 'image/jpeg', 0.92);
+  });
+})();
+</script>

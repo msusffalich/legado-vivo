@@ -105,6 +105,7 @@ async function main() {
   // Archivos públicos y subidas
   app.get('/assets/style.css', (req, res) => res.sendFile(path.join(__dirname, 'assets-style.css')));
   app.get('/assets/app.js', (req, res) => res.sendFile(path.join(__dirname, 'assets-app.js')));
+  app.get('/assets/art.js', (req, res) => res.sendFile(path.join(__dirname, 'assets-art.js')));
   // Subidas protegidas: solo un miembro de la familia del recuerdo puede ver sus fotos/audios
   app.get('/uploads/:name', requireAuth, async (req, res) => {
     const name = path.basename(req.params.name || '');
@@ -114,7 +115,8 @@ async function main() {
       ? '/uploads/' + name.slice(0, -'.thumb.jpg'.length)
       : '/uploads/' + name;
     const { rows } = await db.query(
-      'SELECT family_id FROM memories WHERE photo_path=$1 OR audio_path=$1 OR video_path=$1 LIMIT 1', [lookup]);
+      `SELECT m.family_id FROM memories m WHERE m.photo_path=$1 OR m.audio_path=$1 OR m.video_path=$1 OR m.doc_path=$1
+       OR EXISTS (SELECT 1 FROM memory_photos mp WHERE mp.photo_path=$1 AND mp.memory_id=m.id) LIMIT 1`, [lookup]);
     if (!rows.length) return res.status(404).send('No encontrado');
     const { rows: ok } = await db.query(
       'SELECT 1 FROM memberships WHERE family_id=$1 AND user_id=$2',

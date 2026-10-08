@@ -34,8 +34,8 @@ function addInterview() {
     var targets = { photo: field('photo'), video: field('video'), audio: field('audio'), document: field('document') };
     function pickTarget(f) {
       var type = f.type || '', name = f.name || '';
-      if (/^image\//.test(type) || /\.(heic|heif|hif|avif|jpe?g|png|gif|webp|bmp|tiff?|svg|ico|dng|cr2|cr3|crw|nef|arw|rw2|orf|pef|srw|raf|raw|psd)$/i.test(name)) return targets.photo;
-      if (/^video\//.test(type) || /\.(mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(name)) return targets.video;
+      if (/^image\//.test(type)) return targets.photo;
+      if (/^video\//.test(type)) return targets.video;
       if (/^audio\//.test(type)) return targets.audio;
       if (/pdf/i.test(type) || /word|officedocument/i.test(type) || /^text\//.test(type) || /\.(pdf|docx|txt|md)$/i.test(name)) return targets.document;
       return null;
@@ -53,9 +53,16 @@ function addInterview() {
       var cd = e.clipboardData;
       if (!cd || !cd.files || !cd.files.length) return;
       var handled = false;
+      var photoFiles = [];
       for (var i = 0; i < cd.files.length; i++) {
         var t = pickTarget(cd.files[i]);
-        if (t) {
+        if (!t) continue;
+        // Las fotos pueden acumularse en la galería (múltiple).
+        if (t.name === 'photo' && window.__lvPhotoDrop) {
+          photoFiles.push(cd.files[i]);
+          note(t, cd.files[i].name || cd.files[i].type);
+          handled = true;
+        } else {
           var dt = new DataTransfer();
           dt.items.add(cd.files[i]);
           t.files = dt.files;
@@ -63,6 +70,7 @@ function addInterview() {
           handled = true;
         }
       }
+      if (photoFiles.length && window.__lvPhotoDrop) window.__lvPhotoDrop.addFiles(photoFiles);
       if (handled) e.preventDefault();
     });
   }
@@ -70,3 +78,60 @@ function addInterview() {
   else init();
 })();
 
+// Galería de fotos: selección múltiple + arrastrar y soltar + vista previa
+// con opción de quitar antes de guardar. El input real se sincroniza solo.
+(function () {
+  function init() {
+    var input = document.getElementById('photo-input');
+    var drop = document.getElementById('photo-drop');
+    var prev = document.getElementById('photo-previews');
+    if (!input || !drop) return;
+    var dt = new DataTransfer();
+    function render() {
+      if (!prev) return;
+      prev.innerHTML = '';
+      for (var i = 0; i < dt.files.length; i++) {
+        (function (f, idx) {
+          var box = document.createElement('div');
+          box.className = 'preview';
+          var img = document.createElement('img');
+          img.src = URL.createObjectURL(f);
+          img.alt = '';
+          var rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'preview-rm';
+          rm.textContent = '×';
+          rm.setAttribute('aria-label', '×');
+          rm.addEventListener('click', function () { dt.items.remove(idx); sync(); });
+          box.appendChild(img);
+          box.appendChild(rm);
+          prev.appendChild(box);
+        })(dt.files[i], i);
+      }
+    }
+    function sync() { input.files = dt.files; render(); }
+    function addFiles(files) {
+      for (var i = 0; i < files.length; i++) {
+        if (/^image\//.test(files[i].type || '')) dt.items.add(files[i]);
+      }
+      sync();
+    }
+    input.addEventListener('change', function () {
+      addFiles(input.files);
+      try { input.value = ''; } catch (e) {}
+      sync();
+    });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+    });
+    drop.addEventListener('drop', function (e) {
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+    });
+    window.__lvPhotoDrop = { addFiles: addFiles };
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();

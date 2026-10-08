@@ -18,12 +18,19 @@ convierten en historias verificables y álbumes PDF por temas.
 Legado Vivo es el archivo privado de tu familia:
 
 - **Familias y roles**: crea varias familias; cada una con administrador, colaboradores y lectores.
-- **Recuerdos**: foto, video (máx. 200 MB) y/o audio (máx. 100 MB), relato, transcripción, personas, lugar, fecha (exacta o aproximada)
-  y entrevista guiada. La subida muestra barra de progreso y avisa el motivo si falla. Estados: completo o *pendiente de completar*.
+- **Recuerdos**: fotos (hasta 10 por recuerdo, con selección múltiple, arrastrar y soltar y vista previa antes de
+  guardar; también puedes pegar varias a la vez), video (máx. 200 MB) y/o audio (máx. 100 MB), relato, transcripción,
+  personas, lugar, fecha (exacta o aproximada) y entrevista guiada. La subida muestra barra de progreso y avisa el
+  motivo si falla. Estados: completo o *pendiente de completar*.
   Formatos aceptados: imágenes (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
   y audios (mp3, wav, m4a, aac, ogg, flac…). En la biblioteca, los recuerdos con video muestran una miniatura
-  (primer cuadro) con insignia ▶; el video se reproduce en la página del recuerdo.
-  **Documentos**: adjunta un PDF, Word (.docx) o texto (.txt, .md) (máx. 20 MB): el archivo original queda
+  (primer cuadro) con insignia ▶; el video se reproduce en la página del recuerdo. Las fotos del recuerdo se muestran
+  como galería y al editar puedes quitar las que quieras.
+  **Editor artístico** (botón 🎨 en la página del recuerdo): aplica a cualquier foto los estilos **carboncillo, pop art,
+  caricatura o acuarela** con filtros reales de canvas (grises + contraste + grano, posterizar + saturación, bordes
+  marcados, suavizado + papel); todo se procesa en tu navegador, sin APIs externas, y la versión estilizada se guarda
+  como una foto más del recuerdo.
+  **Documentos**: adjunta un PDF, Word (.docx) o texto (.txt, .md) (máx. 25 MB): el archivo original queda
   disponible para descargar y su contenido se extrae como narrativa del recuerdo (y queda buscable en la
   búsqueda por palabras). **Comentario de la IA** (opcional, requiere clave de OpenAI en el servidor):
   la casilla «Generar comentario con IA» produce un comentario cálido y breve a partir del título y la narrativa;
@@ -34,8 +41,8 @@ Legado Vivo es el archivo privado de tu familia:
   muestra «descargando…» o el motivo del error en tu idioma. El campo «Foto por URL» acepta el enlace
   directo de cualquier imagen pública (o de un post de Instagram): se descarga (máx. 100 MB) y queda como
   la foto del recuerdo. Puedes cambiar la URL después desde *Editar*.
-  **Pegado directo**: también puedes pegar (Ctrl+V o ⌘V) una imagen, un video, un audio o un documento
-  copiado: se coloca solo en su casilla del formulario (un archivo por tipo).
+  **Pegado directo**: también puedes pegar (Ctrl+V o ⌘V) imágenes, un video, un audio o un documento
+  copiado: se coloca solo en su casilla del formulario (varias fotos a la vez, un archivo por los demás tipos).
 - **Cronología**: ordenada por la fecha del recuerdo, no por la fecha de subida.
 - **Historias**: genera texto con IA (OpenAI, opcional) citando sus fuentes, o escríbelas manualmente.
 - **Taller**: arma álbumes PDF por tema (cumpleaños, Navidad, viajes…).
@@ -151,12 +158,19 @@ Necesitas PostgreSQL local con la base creada (`DATABASE_URL`).
 Legado Vivo is your family's private archive:
 
 - **Families & roles**: create several families; each with admin, collaborators and readers.
-- **Memories**: photo, video (max 200 MB) and/or audio (max 100 MB), story, transcription, people, place, date (exact or
-  approximate) and a guided interview. Upload shows a progress bar and reports the reason if it fails. Status: complete or *pending completion*.
+- **Memories**: photos (up to 10 per memory, with multi-select, drag and drop and preview before saving;
+  you can also paste several at once), video (max 200 MB) and/or audio (max 100 MB), story, transcription,
+  people, place, date (exact or approximate) and a guided interview. Upload shows a progress bar and reports the
+  reason if it fails. Status: complete or *pending completion*.
   Accepted formats: images (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
   and audios (mp3, wav, m4a, aac, ogg, flac…). In the library, video memories show a thumbnail
-  (first frame) with a ▶ badge; the video plays on the memory page.
-  **Documents**: attach a PDF, Word (.docx) or text (.txt, .md) file (max 20 MB): the original file stays
+  (first frame) with a ▶ badge; the video plays on the memory page. A memory's photos display as a
+  gallery, and when editing you can remove any of them.
+  **Art editor** (🎨 button on the memory page): apply **charcoal, pop art, caricature or watercolor**
+  styles to any photo using real canvas filters (grayscale + contrast + grain, posterize + saturation, marked
+  edges, softening + paper); everything is processed in your browser, with no external APIs, and the stylized
+  version is saved as another photo of the memory.
+  **Documents**: attach a PDF, Word (.docx) or text (.txt, .md) file (max 25 MB): the original file stays
   available for download and its content is extracted as the memory's narrative (and becomes searchable
   with keyword search). **AI comment** (optional, needs an OpenAI key on the server): the “Generate AI comment”
   checkbox produces a short, warm comment from the title and narrative; it can be regenerated when editing the memory.
@@ -166,8 +180,8 @@ Legado Vivo is your family's private archive:
   shows “downloading…” or the reason for the error in your language. The “Photo by URL” field accepts a
   direct link to any public image (or an Instagram post): it is downloaded (max 100 MB) and saved as the
   memory's photo. You can change the URL later from *Edit*.
-  **Direct paste**: you can also paste (Ctrl+V or ⌘V) a copied image, video, audio or document:
-  it lands in its own form field (one file per type).
+  **Direct paste**: you can also paste (Ctrl+V or ⌘V) copied images, video, audio or documents:
+  they land in their own form field (several photos at once, one file per other type).
 - **Timeline**: ordered by the memory's date, not the upload date.
 - **Stories**: AI-generate text (OpenAI, optional) with cited sources, or write manually.
 - **Workshop**: build themed PDF albums (birthdays, Christmas, trips…).
@@ -319,6 +333,19 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
+- Versión 1.4.0 — 2026-10-08: **mejoras de octubre** — (1) **varias fotos por recuerdo** (hasta 10;
+  selección múltiple, arrastrar y soltar, vista previa antes de guardar, pegar varias a la vez; galería
+  con opción de quitar fotos al editar; migración `migration-007.sql`); (2) **editor artístico** (botón 🎨
+  en el recuerdo): estilos **carboncillo, pop art, caricatura y acuarela** aplicados con filtros reales de
+  canvas 100% en el navegador, sin APIs externas; la versión estilizada se guarda como una foto más;
+  (3) **documentos** PDF/Word/texto con tope subido a **25 MB** (narrativa extraída y buscable verificada
+  de punta a punta). Todo bilingüe ES/EN. /
+  *Version 1.4.0 — 2026-10-08: **October upgrades** — (1) **multiple photos per memory** (up to 10;
+  multi-select, drag and drop, preview before saving, paste several at once; gallery with remove option
+  when editing; `migration-007.sql`); (2) **art editor** (🎨 button on the memory): **charcoal, pop art,
+  caricature and watercolor** styles applied with real canvas filters 100% in the browser, no external APIs;
+  the stylized version is saved as another photo; (3) **documents** PDF/Word/text with the cap raised to
+  **25 MB** (extracted searchable narrative verified end to end). All bilingual ES/EN.*
 - Versión 1.3.3 — 2026-09-29: tres correcciones de idioma — (1) en *Editar recuerdo*, la etiqueta
   "Actual:" del video actual ahora respeta el idioma seleccionado (nueva clave `current`: "Actual"/"Current");
   (2) agregada la clave faltante `invite_used` en inglés ("Used"); (3) el aviso de "mensaje copiado" en

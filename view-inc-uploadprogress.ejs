@@ -10,7 +10,6 @@
   var T = <%- JSON.stringify({
     uploading: t('uploading'),
     done: t('upload_done'),
-    processing: lang === 'en' ? 'Upload complete. Converting photos, video and audio; keep this page open…' : 'Carga completada. Convirtiendo fotos, video y audio; mantén esta página abierta…',
     serverError: t('upload_server_error'),
     connError: t('upload_connection_error')
   }) %>;
@@ -45,7 +44,6 @@
         status.textContent = T.uploading;
       }
     });
-    xhr.upload.addEventListener('load', function () { status.textContent = T.processing; });
     xhr.addEventListener('load', function () {
       var data = null;
       try { data = JSON.parse(xhr.responseText); } catch (e2) { /* noop */ }
@@ -62,4 +60,3 @@
   });
 })();
 </script>
-

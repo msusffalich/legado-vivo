@@ -121,3 +121,21 @@ audio { width: 100%; }
   border: 1px solid #e3d3ae; }
 .ai-comment .ai-star { font-size: 1.3rem; color: #b98a2f; line-height: 1.4; }
 .ai-comment p { margin: .3rem 0 0; white-space: pre-wrap; }
+
+/* Galería de fotos: subida múltiple, vista previa y miniaturas */
+.dropzone { border: 2px dashed var(--line); border-radius: 10px; padding: .9rem; margin: .6rem 0; background: #fffdf8; transition: border-color .15s, background .15s; }
+.dropzone.over { border-color: var(--brand); background: #fdf6e8; }
+.previews { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+.preview { position: relative; width: 96px; height: 96px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: #eee; }
+.preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.preview-rm { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; border-radius: 50%; border: none; background: rgba(0,0,0,.65); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
+.preview.pick { cursor: pointer; }
+.preview.pick.sel { outline: 3px solid var(--brand); }
+.gallery { display: flex; flex-wrap: wrap; gap: .5rem; margin: .6rem 0; }
+.gallery .thumb { width: 110px; height: 110px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+
+/* Editor artístico */
+.stylebtns { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0; }
+.stylebtn.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
+.art-stage { margin: 1rem 0; text-align: center; }
+.art-stage canvas { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #eee; }

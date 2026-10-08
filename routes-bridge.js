@@ -15,7 +15,6 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
-const { normalizeMedia, mediaErrorMessage } = require('./media-normalize');
 
 const router = express.Router();
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
@@ -42,7 +41,7 @@ function saveBase64(b64, filename) {
   return '/uploads/' + name;
 }
 
-router.post('/drafts', checkKey, async (req, res, next) => {
+router.post('/drafts', checkKey, async (req, res) => {
   const b = req.body || {};
   const draftId = (b.draftId || '').trim();
   const familyId = parseInt(b.familyId, 10);
@@ -55,30 +54,13 @@ router.post('/drafts', checkKey, async (req, res, next) => {
   const { rows: dup } = await db.query('SELECT id FROM memories WHERE bridge_draft_id=$1', [draftId]);
   if (dup.length) return res.json({ ok: true, memoryId: dup[0].id, duplicate: true });
 
-  let photo = saveBase64(b.photoBase64, b.photoFilename || 'photo.jpg');
-  let audio = saveBase64(b.audioBase64, b.audioFilename || 'audio.ogg');
-  const createdFiles = [photo, audio].filter(Boolean).map(p => path.join(UPLOAD_DIR, path.basename(p)));
-  async function cleanup() { for (const f of createdFiles) await fs.promises.rm(f, { force: true }).catch(() => {}); }
-  try {
-    if ((b.photoBase64 && !photo) || (b.audioBase64 && !audio)) throw Object.assign(new Error('Invalid media'), { code: 'MEDIA_CONVERSION_FAILED' });
-    if (photo) {
-      const r = await normalizeMedia(path.join(UPLOAD_DIR, path.basename(photo)), 'photo');
-      createdFiles.push(r.path); photo = '/uploads/' + r.filename;
-    }
-    if (audio) {
-      const r = await normalizeMedia(path.join(UPLOAD_DIR, path.basename(audio)), 'audio');
-      createdFiles.push(r.path); audio = '/uploads/' + r.filename;
-    }
-  } catch (err) {
-    await cleanup();
-    return res.status(400).json({ ok: false, error: mediaErrorMessage(err, req.lang) });
-  }
+  const photo = saveBase64(b.photoBase64, b.photoFilename || 'photo.jpg');
+  const audio = saveBase64(b.audioBase64, b.audioFilename || 'audio.ogg');
   const story = b.text || b.story || '';
   const title = (b.title || '').trim() || story.split('\n')[0].slice(0, 80) || 'Recuerdo del asistente';
 
-  let client;
+  const client = await db.pool.connect();
   try {
-    client = await db.pool.connect();
     await client.query('BEGIN');
     const { rows } = await client.query(
       `INSERT INTO memories (family_id, title, story, transcription, place, memory_date, date_precision,
@@ -90,6 +72,9 @@ router.post('/drafts', checkKey, async (req, res, next) => {
        photo, audio, draftId]
     );
     const mid = rows[0].id;
+    if (photo) {
+      await client.query('INSERT INTO memory_photos (memory_id, photo_path, sort_order) VALUES ($1,$2,0)', [mid, photo]);
+    }
     const names = Array.isArray(b.people) ? b.people : [];
     for (const raw of names) {
       const nm = String(raw || '').trim();
@@ -106,13 +91,11 @@ router.post('/drafts', checkKey, async (req, res, next) => {
     await client.query('COMMIT');
     res.json({ ok: true, memoryId: mid, duplicate: false });
   } catch (err) {
-    if (client) await client.query('ROLLBACK').catch(() => {});
-    await cleanup();
-    return next(err);
+    await client.query('ROLLBACK');
+    throw err;
   } finally {
-    if (client) client.release();
+    client.release();
   }
 });
 
 module.exports = router;
-
