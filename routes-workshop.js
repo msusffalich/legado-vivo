@@ -4,6 +4,9 @@ const db = require('./db');
 const { canWrite, requireAdmin } = require('./mw');
 const { generateAlbumPDF } = require('./pdfgen');
 const { THEME_IDS } = require('./album-themes');
+const { prepareAlbumHTML, albumZip } = require('./album-html');
+const { Readable } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
 
 const router = express.Router({ mergeParams: true });
 
@@ -79,13 +82,20 @@ function blocksMemoryIds(blocks) {
 }
 
 // Resuelve los bloques a ítems ordenados listos para la vista y el PDF.
-async function resolveItems(blocks) {
+async function resolveItems(blocks, familyId) {
   const ids = blocksMemoryIds(blocks);
   const byId = new Map();
   if (ids.length) {
-    const { rows } = await db.query('SELECT * FROM memories WHERE id = ANY($1)', [ids]);
+    const { rows } = await db.query('SELECT * FROM memories WHERE id = ANY($1) AND family_id=$2', [ids, familyId]);
     for (const m of rows) byId.set(m.id, m);
     await withPeople([...byId.values()]);
+    const { rows: photos } = await db.query(
+      'SELECT mp.memory_id, mp.photo_path FROM memory_photos mp JOIN memories m ON m.id=mp.memory_id WHERE mp.memory_id = ANY($1) AND m.family_id=$2 ORDER BY mp.sort_order, mp.id',
+      [ids, familyId]);
+    for (const photo of photos) {
+      const memory = byId.get(photo.memory_id);
+      if (memory) (memory.photo_paths = memory.photo_paths || []).push(photo.photo_path);
+    }
   }
   return blocks
     .map((b) => (b.type === 'story'
@@ -171,7 +181,7 @@ router.get('/:aid', async (req, res) => {
     [req.params.aid, req.family.id]);
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const album = rows[0];
-  const items = await resolveItems(normalizeBlocks(album.memory_ids));
+  const items = await resolveItems(normalizeBlocks(album.memory_ids), req.family.id);
   const memCount = items.filter((it) => it.kind === 'memory').length;
   res.render('view-layout', {
     page: 'view-album-show', title: album.title,
@@ -186,12 +196,40 @@ router.get('/:aid/download', async (req, res) => {
     [req.params.aid, req.family.id]);
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const album = rows[0];
-  const items = await resolveItems(normalizeBlocks(album.memory_ids));
+  const items = await resolveItems(normalizeBlocks(album.memory_ids), req.family.id);
   const pdf = await generateAlbumPDF({ family: req.family, album, items, lang: req.lang });
   const fname = album.title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'album';
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${fname}.pdf"`);
   res.send(pdf);
+});
+
+// The same on-demand export works for legacy numeric ids and current story blocks.
+// Authentication and family membership are enforced by the parent router.
+router.get('/:aid/download-html', async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT a.*, u.name AS author_name FROM albums a LEFT JOIN users u ON u.id=a.created_by WHERE a.id=$1 AND a.family_id=$2',
+      [req.params.aid, req.family.id]);
+    if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
+    const album = rows[0];
+    const items = await resolveItems(normalizeBlocks(album.memory_ids), req.family.id);
+    const { entries, size } = await prepareAlbumHTML({ family: req.family, album, items, lang: req.lang });
+    const fname = album.title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'album';
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${fname}-html.zip"`);
+    res.setHeader('Content-Length', size);
+    res.setHeader('Cache-Control', 'private, no-store');
+    await pipeline(Readable.from(albumZip(entries)), res);
+  } catch (err) {
+    if (res.headersSent || res.destroyed) { if (!res.destroyed) res.destroy(err); return; }
+    if (err.code === 'ALBUM_TOO_LARGE' || err.code === 'MEDIA_CONVERSION_FAILED') {
+      return res.status(err.code === 'ALBUM_TOO_LARGE' ? 413 : 422).render('view-layout', {
+        page: 'view-error', title: 'HTML', message: req.t(err.code === 'ALBUM_TOO_LARGE' ? 'album_html_too_large' : 'album_html_media_error'),
+      });
+    }
+    next(err);
+  }
 });
 
 router.post('/:aid/delete', canWrite, async (req, res) => {

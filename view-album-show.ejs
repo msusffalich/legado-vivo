@@ -3,6 +3,7 @@
   <h1>📖 <%= album.title %></h1>
   <p>
     <a class="btn" href="/families/<%= family.id %>/workshop/<%= album.id %>/download"><%= t('download_pdf') %></a>
+    <a class="btn" href="/families/<%= family.id %>/workshop/<%= album.id %>/download-html"><%= t('download_html') %></a>
     <% if (canWrite) { %>
     <a class="btn small" href="/families/<%= family.id %>/workshop/<%= album.id %>/edit"><%= t('edit_album') %></a>
     <form class="inline" method="post" action="/families/<%= family.id %>/workshop/<%= album.id %>/delete"
@@ -14,6 +15,7 @@
   </p>
 </div>
 <p class="muted"><%= memCount === 1 ? t('one_memory') : t('memories_count', { n: memCount }) %></p>
+<p class="muted small"><%= t('album_html_hint') %></p>
 <p class="muted small"><%= t('by_author', { name: album.author_name || '—' }) %> · <%= t('created_on', { date: fmtDate(album.created_at) }) %> · <%= t('theme_' + (album.theme || 'general')) %></p>
 <% if (album.narrative) { %><div class="card"><p style="white-space:pre-wrap"><%= album.narrative %></p></div><% } %>
 <div class="grid">

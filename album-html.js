@@ -142,21 +142,25 @@ async function prepareAlbumHTML({ family, album, items, lang = 'es', uploadDir }
     number++;
     const title = m.title || `${w.memory} ${number}`;
     const media = [];
+    const photoPaths = [...new Set([m.photo_path, ...(m.photo_paths || [])].filter(Boolean))];
     for (const [kind, field, remote] of [
       ['photo','photo_path','photo_url'], ['video','video_path','video_url'],
       ['audio','audio_path',null], ['document','doc_path',null],
     ]) {
-      const src = await mediaFile(m[field], kind);
+      const values = kind === 'photo' ? (photoPaths.length ? photoPaths : [null]) : [m[field]];
+      for (const value of values) {
+      const src = await mediaFile(value, kind);
       const original = remote ? externalUrl(m[remote]) : '';
       if (src) {
         if (kind === 'photo') media.push(`<figure><img src="${src}" alt="${e(title)}" loading="eager"></figure>`);
         else if (kind === 'video') media.push(`<figure><video controls playsinline preload="metadata" aria-label="${e(title)}" src="${src}"></video><figcaption>${e(w.video)}</figcaption></figure>`);
         else if (kind === 'audio') media.push(`<figure><audio controls preload="metadata" aria-label="${e(title)}" src="${src}"></audio><figcaption>${e(w.audio)}</figcaption></figure>`);
         else media.push(`<p><a class="file-link" href="${src}" download>${e(w.document)}: ${e(m.doc_name || w.open)}</a></p>`);
-      } else if (m[field] || (remote && m[remote])) {
+      } else if (value || (remote && m[remote])) {
         const warning = `${title} — ${w[kind]}: ${w.missing}`;
         notes.push(warning);
         media.push(`<p class="notice">${e(w[kind])}: ${e(w.missing)}.${original ? ` <a href="${e(original)}" target="_blank" rel="noopener noreferrer">${e(w.external)}</a>` : ''}</p>`);
+      }
       }
     }
     const meta = [dateLabel(m.memory_date, lang, m.date_precision === 'approx'), m.place].filter(Boolean).join(' · ');
