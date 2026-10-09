@@ -34,7 +34,7 @@ function addInterview() {
     var targets = { photo: field('photo'), video: field('video'), audio: field('audio'), document: field('document') };
     function pickTarget(f) {
       var type = f.type || '', name = f.name || '';
-      if (/^image\//.test(type)) return targets.photo;
+      if (/^image\//.test(type) || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg)$/i.test(name)) return targets.photo;
       if (/^video\//.test(type)) return targets.video;
       if (/^audio\//.test(type)) return targets.audio;
       if (/pdf/i.test(type) || /word|officedocument/i.test(type) || /^text\//.test(type) || /\.(pdf|docx|txt|md)$/i.test(name)) return targets.document;
@@ -87,16 +87,24 @@ function addInterview() {
     var prev = document.getElementById('photo-previews');
     if (!input || !drop) return;
     var dt = new DataTransfer();
+    var previewUrls = [];
     function render() {
       if (!prev) return;
+      previewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+      previewUrls = [];
       prev.innerHTML = '';
       for (var i = 0; i < dt.files.length; i++) {
         (function (f, idx) {
           var box = document.createElement('div');
           box.className = 'preview';
           var img = document.createElement('img');
-          img.src = URL.createObjectURL(f);
-          img.alt = '';
+          var url = URL.createObjectURL(f);
+          previewUrls.push(url);
+          img.src = url;
+          img.alt = f.name;
+          var label = document.createElement('span');
+          label.className = 'muted small';
+          label.textContent = f.name;
           var rm = document.createElement('button');
           rm.type = 'button';
           rm.className = 'preview-rm';
@@ -104,6 +112,7 @@ function addInterview() {
           rm.setAttribute('aria-label', '×');
           rm.addEventListener('click', function () { dt.items.remove(idx); sync(); });
           box.appendChild(img);
+          box.appendChild(label);
           box.appendChild(rm);
           prev.appendChild(box);
         })(dt.files[i], i);
@@ -112,14 +121,14 @@ function addInterview() {
     function sync() { input.files = dt.files; render(); }
     function addFiles(files) {
       for (var i = 0; i < files.length; i++) {
-        if (/^image\//.test(files[i].type || '')) dt.items.add(files[i]);
+        if (/^image\//.test(files[i].type || '') || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg)$/i.test(files[i].name || '')) dt.items.add(files[i]);
       }
       sync();
     }
     input.addEventListener('change', function () {
-      addFiles(input.files);
-      try { input.value = ''; } catch (e) {}
-      sync();
+      // input.files shares dt.files in Chromium. Clearing input.value would
+      // also clear the gallery and submit an empty photo field.
+      addFiles(Array.prototype.slice.call(input.files || []));
     });
     ['dragenter', 'dragover'].forEach(function (ev) {
       drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
