@@ -75,6 +75,11 @@ async function processDocumentUpload(req) {
   if (!f) return null;
   const abs = path.join(UPLOAD_DIR, f.filename);
   const r = await extractDocText(abs, f.originalname || f.filename);
+  if (!r.ok) {
+    const error = new Error('Document text extraction failed');
+    error.code = 'DOC_EXTRACTION_FAILED';
+    throw error;
+  }
   return {
     docPath: '/uploads/' + f.filename,
     docName: f.originalname || f.filename,
@@ -152,6 +157,7 @@ function uploadFail(req, res, err, fallback) {
     msg = req.t('upload_too_large', { max });
   }
   else if (err && err.message === 'badtype') msg = req.t('upload_bad_type');
+  else if (err && err.code === 'DOC_EXTRACTION_FAILED') msg = req.t('doc_extract_failed');
   else msg = req.t('error_generic');
   cleanupUploads(req.files);
   if (isXhr(req)) return res.status(400).json({ ok: false, error: msg });
@@ -348,6 +354,7 @@ router.post('/', canWrite, (req, res, next) => {
   req.session.flash = req.t('memory_created');
   res.redirect(doneCreateUrl);
   } catch (e) {
+    if (e.code === 'DOC_EXTRACTION_FAILED') return uploadFail(req, res, e, `/families/${req.family.id}/memories/new`);
     cleanupUploads(req.files);
     if (isXhr(req)) return res.status(500).json({ ok: false, error: req.t('upload_server_error') });
     return next(e);
@@ -406,6 +413,8 @@ router.post('/:mid', canWrite, (req, res, next) => {
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const old = rows[0];
   const b = req.body;
+  // Validate a replacement document before changing the existing memory/files.
+  const newDoc = await processDocumentUpload(req);
   // Instantánea de la versión anterior
   await db.query('INSERT INTO memory_versions (memory_id, data, created_by) VALUES ($1,$2,$3)',
     [mid, JSON.stringify(old), req.session.user.id]);
@@ -442,7 +451,6 @@ router.post('/:mid', canWrite, (req, res, next) => {
   const title = (b.title || '').trim() || old.title;
   // Documento: reemplazo, eliminación o se conserva el anterior.
   let docPath = old.doc_path, docName = old.doc_name, docText = old.doc_text || '';
-  const newDoc = await processDocumentUpload(req);
   if (newDoc) {
     deleteDocFile(old.doc_path);
     docPath = newDoc.docPath; docName = newDoc.docName; docText = newDoc.docText;
@@ -491,6 +499,7 @@ router.post('/:mid', canWrite, (req, res, next) => {
   req.session.flash = req.t('memory_updated');
   res.redirect(doneEditUrl);
   } catch (e) {
+    if (e.code === 'DOC_EXTRACTION_FAILED') return uploadFail(req, res, e, `/families/${req.family.id}/memories/${req.params.mid}/edit`);
     cleanupUploads(req.files);
     if (isXhr(req)) return res.status(500).json({ ok: false, error: req.t('upload_server_error') });
     return next(e);
@@ -503,6 +512,7 @@ router.get('/:mid/art', canWrite, async (req, res) => {
   const { rows } = await db.query('SELECT * FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const photos = await loadMemoryPhotos(mid);
+  if (!photos.length && rows[0].photo_path) photos.push({ photo_path: rows[0].photo_path });
   res.render('view-layout', {
     page: 'view-art-editor', title: req.t('art_editor_title'),
     family: req.family, membership: req.membership, memory: rows[0], photos,

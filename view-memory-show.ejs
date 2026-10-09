@@ -4,6 +4,7 @@
   <p>
     <% if (canWrite) { %>
       <a class="btn small" href="/families/<%= family.id %>/memories/<%= memory.id %>/edit"><%= t('edit') %></a>
+      <a class="btn small" href="/families/<%= family.id %>/memories/<%= memory.id %>/art">🎨 <%= t('art_editor_title') %></a>
       <form class="inline" method="post" action="/families/<%= family.id %>/memories/<%= memory.id %>/delete"
             onsubmit="return confirm('<%= t('delete_memory_confirm') %>')">
         <button class="btn small danger" type="submit"><%= t('delete') %></button>
@@ -27,10 +28,8 @@
       <% }); %>
       </div>
     <% } %>
-    <% if (canWrite) { %><p><a class="btn ghost small" href="/families/<%= family.id %>/memories/<%= memory.id %>/art">🎨 <%= t('art_editor_title') %></a></p><% } %>
     <% if (memory.photo_url) { %><p class="muted small"><%= t('video_source') %>: <a href="<%= memory.photo_url %>" target="_blank" rel="noopener"><%= memory.photo_url %></a></p><% } %>
   <% } else if (memory.photo_path) { %><img class="bigimg" src="<%= memory.photo_path %>" alt="">
-    <% if (canWrite) { %><p><a class="btn ghost small" href="/families/<%= family.id %>/memories/<%= memory.id %>/art">🎨 <%= t('art_editor_title') %></a></p><% } %>
     <% if (memory.photo_url) { %><p class="muted small"><%= t('video_source') %>: <a href="<%= memory.photo_url %>" target="_blank" rel="noopener"><%= memory.photo_url %></a></p><% } %>
   <% } else if (memory.photo_url && memory.photo_dl_status === 'pending') { %>
     <p class="flash">⏳ <%= t('photo_downloading') %></p>
@@ -56,7 +55,7 @@
     <p><a class="btn ghost small" href="<%= memory.doc_path %>" target="_blank" rel="noopener">⬇ <%= t('doc_download') %>: <%= memory.doc_name || 'documento' %></a></p>
     <% if (memory.doc_text) { %>
       <h4><%= t('doc_narrative_label') %></h4><p class="story muted"><%= memory.doc_text %></p>
-    <% } %>
+    <% } else { %><p class="muted small"><%= t('doc_no_text') %></p><% } %>
   <% } %>
   <% if (memory.ai_comment) { %>
     <div class="ai-comment"><span class="ai-star">✦</span><div><strong><%= t('ai_comment_label') %></strong><p><%= memory.ai_comment %></p></div></div>
