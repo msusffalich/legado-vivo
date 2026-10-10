@@ -507,3 +507,31 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   builder they are inserted with +📖 between memories, edited inline, reordered and
   deleted; on the web they appear as interleaved 📖 cards and in the PDF they get their
   own page with a vector book icon. Downloading regenerates the PDF from the saved album.*
+
+
+### Corrección integral — 10 de octubre de 2026
+
+Se recuperaron las funciones eliminadas por la última carga: selección de recuerdos no
+consecutivos, movimiento individual y múltiple con desplazamiento automático y borrador,
+cargas mixtas de fotos/videos, extracción de documentos, editor artístico y exportación HTML.
+El ZIP HTML contiene el álbum autocontenido con sus medios, además del PDF existente.
+
+**Sidecar:** en Taller (crear/editar/ver álbum) y en cada recuerdo hay un botón
+«Descargar sidecar .md» / “Download sidecar .md”. En el recuerdo aparece junto al documento;
+también está disponible sin documento. El nombre usa el del documento o el título.
+Se exportan únicamente los metadatos guardados y las personas vinculadas de la misma familia.
+No se certifica su verdad histórica ni se infieren datos desde imágenes, narrativas o IA.
+Una fecha ausente, inválida o de precisión desconocida se omite, junto con `diario`.
+Una fecha aproximada conserva `precision_fecha: "approx"` y no crea enlace diario.
+Una fecha exacta conserva `precision_fecha: "exact"` y puede enlazar el Diario.
+La fecha se lee como texto desde PostgreSQL para evitar cambios por zona horaria.
+No se utiliza la fecha de carga o de creación como fecha del recuerdo.
+
+**English:** Restores album selection/reordering, mixed media uploads, document extraction,
+art editing and portable HTML export. Each memory can download a sidecar, including memories
+without attachments. Only stored metadata and linked people in the same family are exported.
+Missing/invalid/unknown dates are omitted; approximate dates are explicitly marked and do not
+create a daily-note link. This exports recorded information, not historical verification.
+
+Validación local: `npm ci` y `npm test`. Las pruebas HTTP usan datos simulados y no modifican
+la base de producción. Conservar las variables y el volumen existentes al desplegar.

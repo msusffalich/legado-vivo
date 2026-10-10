@@ -32,7 +32,7 @@
     <span class="muted small" id="art-status"></span>
   </p>
 </div>
-<script src="/assets/art.js"></script>
+<script src="/assets/art.js?v=20261009-editor"></script>
 <script>
 (function () {
   var src = document.getElementById('art-source');
@@ -41,12 +41,25 @@
   var saveBtn = document.getElementById('art-save');
   var status = document.getElementById('art-status');
   var style = null, hasRender = false;
+  var sourceUrl = null;
+  var T = <%- JSON.stringify({ loading: t('art_loading'), loadError: t('art_load_error'), renderError: t('art_render_error') }) %>;
   var MID = <%= memory.id %>, FID = <%= family.id %>;
 
+  function readyStyles(ready) {
+    document.querySelectorAll('.stylebtn').forEach(function (button) { button.disabled = !ready; });
+  }
+  readyStyles(false);
+
   function pick(url, box) {
+    if (sourceUrl) { URL.revokeObjectURL(sourceUrl); sourceUrl = null; }
+    if (url.indexOf('blob:') === 0) sourceUrl = url;
+    style = null; hasRender = false; saveBtn.disabled = true; readyStyles(false);
+    canvas.width = 0; canvas.height = 0; empty.style.display = ''; markStyles();
+    status.textContent = T.loading;
     document.querySelectorAll('#art-sources .pick').forEach(function (el) { el.classList.remove('sel'); });
     if (box) box.classList.add('sel');
-    src.onload = function () { style = null; hasRender = false; empty.style.display = ''; saveBtn.disabled = true; markStyles(); };
+    src.onload = function () { readyStyles(true); status.textContent = ''; };
+    src.onerror = function () { readyStyles(false); status.textContent = T.loadError; };
     src.src = url;
   }
   document.querySelectorAll('#art-sources .pick').forEach(function (box) {
@@ -70,12 +83,12 @@
     b.addEventListener('click', function () {
       if (!src.src) { status.textContent = '<%= t('art_need_photo') %>'; return; }
       style = b.getAttribute('data-style');
-      if (window.LVArt.applyToCanvas(canvas, style)) {
+      try { if (window.LVArt.applyToCanvas(canvas, style)) {
         hasRender = true;
         empty.style.display = 'none';
         saveBtn.disabled = false;
         status.textContent = '';
-      }
+      } } catch (error) { hasRender = false; saveBtn.disabled = true; status.textContent = T.renderError; }
       markStyles();
     });
   });

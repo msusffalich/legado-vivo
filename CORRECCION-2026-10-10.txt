@@ -1,0 +1,33 @@
+LEGADO VIVO — CÓDIGO COMPLETO CORREGIDO — 10 OCTUBRE 2026
+
+Base: msusffalich/legado-vivo, main, dcf4334.
+Se recuperaron las funciones presentes antes de la última subida (df8eb15),
+integrando el sidecar sin sustituirlas por versiones antiguas.
+
+INCLUYE
+- Descarga de álbum HTML con fotos, videos y audio incorporados, junto al PDF.
+- Crear/editar álbumes con recuerdos seleccionados no consecutivos.
+- Movimiento individual y múltiple, posición y desplazamiento automático.
+- Borrador de álbum para recuperación tras fallo de guardado.
+- Cargas mixtas de fotos/videos, documentos y editor artístico recuperados.
+- Descargar sidecar .md desde Taller y desde cada recuerdo, con o sin documento.
+- Fecha guardada válida, lugar y personas vinculadas: sin IA ni fechas de carga.
+- Fecha ausente/desconocida/inválida: se omite. Aproximada: marcada como approx.
+- Interfaz y ayuda en español e inglés.
+
+INSTALACIÓN
+El paquete contiene el código completo en su raíz, no solo un parche.
+Si la corrección no está ya en GitHub:
+1. Descomprime el ZIP.
+2. Abre msusffalich/legado-vivo, rama main, Add file > Upload files.
+3. Sube los archivos descomprimidos en la raíz y confirma el commit.
+No subas el ZIP como archivo único: GitHub no lo descomprime.
+Conserva las variables de Railway, DATABASE_URL y el volumen de uploads.
+Este paquete no contiene claves, archivos personales ni una copia de la base.
+La aplicación ejecuta las migraciones pendientes al iniciar.
+
+VALIDACIÓN
+npm test: 8 pruebas aprobadas (HTTP con datos simulados, extracción de documentos,
+selección de medios, exportación HTML, sidecar, permisos y creación/edición).
+Todos los archivos JavaScript pasan node --check.
+Producción y recorrido visual completo no verificados en este entorno.

@@ -34,8 +34,8 @@ function addInterview() {
     var targets = { photo: field('photo'), video: field('video'), audio: field('audio'), document: field('document') };
     function pickTarget(f) {
       var type = f.type || '', name = f.name || '';
-      if (/^image\//.test(type)) return targets.photo;
-      if (/^video\//.test(type)) return targets.video;
+      if (/^image\//.test(type) || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg)$/i.test(name)) return targets.photo;
+      if (/^video\//.test(type) || /\.(mp4|mov|webm|m4v|3gp)$/i.test(name)) return targets.photo;
       if (/^audio\//.test(type)) return targets.audio;
       if (/pdf/i.test(type) || /word|officedocument/i.test(type) || /^text\//.test(type) || /\.(pdf|docx|txt|md)$/i.test(name)) return targets.document;
       return null;
@@ -87,16 +87,31 @@ function addInterview() {
     var prev = document.getElementById('photo-previews');
     if (!input || !drop) return;
     var dt = new DataTransfer();
+    var previewUrls = [];
+    var notice = document.getElementById('photo-limit-notice');
+    function remainingExisting() {
+      return Math.max(0, Number(input.dataset && input.dataset.existing || 0) -
+        document.querySelectorAll('input[name="remove_photo_ids"]:checked, input[name="remove_video_ids"]:checked').length);
+    }
     function render() {
       if (!prev) return;
+      previewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+      previewUrls = [];
       prev.innerHTML = '';
       for (var i = 0; i < dt.files.length; i++) {
         (function (f, idx) {
           var box = document.createElement('div');
           box.className = 'preview';
-          var img = document.createElement('img');
-          img.src = URL.createObjectURL(f);
-          img.alt = '';
+          var video = /^video\//.test(f.type || '') || /\.(mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(f.name || '');
+          var img = document.createElement(video ? 'video' : 'img');
+          if (video) { img.controls = true; img.preload = 'metadata'; }
+          var url = URL.createObjectURL(f);
+          previewUrls.push(url);
+          img.src = url;
+          img.alt = f.name;
+          var label = document.createElement('span');
+          label.className = 'muted small';
+          label.textContent = f.name;
           var rm = document.createElement('button');
           rm.type = 'button';
           rm.className = 'preview-rm';
@@ -104,6 +119,7 @@ function addInterview() {
           rm.setAttribute('aria-label', '×');
           rm.addEventListener('click', function () { dt.items.remove(idx); sync(); });
           box.appendChild(img);
+          box.appendChild(label);
           box.appendChild(rm);
           prev.appendChild(box);
         })(dt.files[i], i);
@@ -111,15 +127,21 @@ function addInterview() {
     }
     function sync() { input.files = dt.files; render(); }
     function addFiles(files) {
+      files = Array.prototype.slice.call(files || []);
+      var overflow = false;
       for (var i = 0; i < files.length; i++) {
-        if (/^image\//.test(files[i].type || '')) dt.items.add(files[i]);
+        if (/^(image|video)\//.test(files[i].type || '') || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg|mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(files[i].name || '')) {
+          if (dt.files.length + remainingExisting() >= 10) overflow = true;
+          else dt.items.add(files[i]);
+        }
       }
+      if (notice) notice.textContent = overflow ? input.dataset.limitMessage : '';
       sync();
     }
     input.addEventListener('change', function () {
-      addFiles(input.files);
-      try { input.value = ''; } catch (e) {}
-      sync();
+      // input.files shares dt.files in Chromium. Clearing input.value would
+      // also clear the gallery and submit an empty photo field.
+      addFiles(Array.prototype.slice.call(input.files || []));
     });
     ['dragenter', 'dragover'].forEach(function (ev) {
       drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
