@@ -143,11 +143,12 @@ async function prepareAlbumHTML({ family, album, items, lang = 'es', uploadDir }
     const title = m.title || `${w.memory} ${number}`;
     const media = [];
     const photoPaths = [...new Set([m.photo_path, ...(m.photo_paths || [])].filter(Boolean))];
+    const videoPaths = [...new Set([m.video_path, ...(m.video_paths || [])].filter(Boolean))];
     for (const [kind, field, remote] of [
       ['photo','photo_path','photo_url'], ['video','video_path','video_url'],
       ['audio','audio_path',null], ['document','doc_path',null],
     ]) {
-      const values = kind === 'photo' ? (photoPaths.length ? photoPaths : [null]) : [m[field]];
+      const values = kind === 'photo' ? (photoPaths.length ? photoPaths : [null]) : kind === 'video' ? (videoPaths.length ? videoPaths : [null]) : [m[field]];
       for (const value of values) {
       const src = await mediaFile(value, kind);
       const original = remote ? externalUrl(m[remote]) : '';

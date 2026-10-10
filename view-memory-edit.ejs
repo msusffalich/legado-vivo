@@ -5,7 +5,7 @@
   <label><%= t('memory_title') %> *<input name="title" required maxlength="200" value="<%= memory.title %>"></label>
   <div class="two">
     <label><%= t('photos_label') %> <span class="muted">(<%= t('optional') %> · <%= t('photos_max_hint') %>)</span>
-      <input type="file" id="photo-input" name="photo" accept="image/*" multiple>
+      <input type="file" id="photo-input" name="photo" accept="image/*,video/*" multiple data-limit-message="<%= t('photos_limit_error') %>" data-existing="<%= Math.max(photos.length, memory.photo_path ? 1 : 0) + Math.max(videos.length, memory.video_path ? 1 : 0) %>">
       <span class="muted small"><%= t('photos_hint') %></span></label>
     <label><%= t('audio_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="audio" accept="audio/*"></label>
   </div>
@@ -20,8 +20,15 @@
     </div>
   </fieldset>
   <% } %>
+  <% if (videos.length) { %>
+  <fieldset><legend><%= t('videos_current') %></legend><div class="previews">
+  <% videos.forEach(function(v) { %><div class="preview">
+    <video controls preload="metadata" src="<%= v.video_path %>" style="max-width:100%"></video>
+    <label class="check"><input type="checkbox" name="remove_video_ids" value="<%= v.id %>"> <%= t('remove') %></label>
+  </div><% }); %></div></fieldset><% } %>
   <div id="photo-drop" class="dropzone">
     <span class="muted">📷 <%= t('drop_hint') %></span>
+    <p id="photo-limit-notice" class="err" role="status" aria-live="polite"></p>
     <div id="photo-previews" class="previews"></div>
   </div>
   <label><%= t('photo_url_label') %> <span class="muted">(<%= t('optional') %>)</span>
@@ -29,8 +36,6 @@
     <span class="muted small"><%= t('photo_url_hint') %></span>
     <% if (memory.photo_url && memory.photo_dl_status === 'pending') { %><span class="muted small">⏳ <%= t('photo_downloading') %></span><% } %>
     <% if (memory.photo_url && memory.photo_dl_status === 'error') { %><span class="err small">⚠️ <%= t('photo_dl_failed') %><% if (memory.photo_dl_error) { %>: <%= memory.photo_dl_error %><% } %></span><% } %></label>
-  <label><%= t('video_label') %> <span class="muted">(<%= t('optional') %> · <%= t('video_max_hint') %>)</span><input type="file" name="video" accept="video/*">
-    <% if (memory.video_path) { %><span class="muted small"><%= t('current') %>: <a href="<%= memory.video_path %>" target="_blank"><%= t('view') %></a></span><% } %></label>
   <label><%= t('video_url_label') %> <span class="muted">(<%= t('optional') %>)</span>
     <input type="url" name="video_url" inputmode="url" placeholder="https://www.youtube.com/watch?v=… / https://www.instagram.com/reel/…" value="<%= memory.video_url || '' %>">
     <span class="muted small"><%= t('video_url_hint') %></span>

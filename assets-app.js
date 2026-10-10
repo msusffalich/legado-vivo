@@ -35,7 +35,7 @@ function addInterview() {
     function pickTarget(f) {
       var type = f.type || '', name = f.name || '';
       if (/^image\//.test(type) || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg)$/i.test(name)) return targets.photo;
-      if (/^video\//.test(type)) return targets.video;
+      if (/^video\//.test(type) || /\.(mp4|mov|webm|m4v|3gp)$/i.test(name)) return targets.photo;
       if (/^audio\//.test(type)) return targets.audio;
       if (/pdf/i.test(type) || /word|officedocument/i.test(type) || /^text\//.test(type) || /\.(pdf|docx|txt|md)$/i.test(name)) return targets.document;
       return null;
@@ -88,6 +88,11 @@ function addInterview() {
     if (!input || !drop) return;
     var dt = new DataTransfer();
     var previewUrls = [];
+    var notice = document.getElementById('photo-limit-notice');
+    function remainingExisting() {
+      return Math.max(0, Number(input.dataset && input.dataset.existing || 0) -
+        document.querySelectorAll('input[name="remove_photo_ids"]:checked, input[name="remove_video_ids"]:checked').length);
+    }
     function render() {
       if (!prev) return;
       previewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
@@ -97,7 +102,9 @@ function addInterview() {
         (function (f, idx) {
           var box = document.createElement('div');
           box.className = 'preview';
-          var img = document.createElement('img');
+          var video = /^video\//.test(f.type || '') || /\.(mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(f.name || '');
+          var img = document.createElement(video ? 'video' : 'img');
+          if (video) { img.controls = true; img.preload = 'metadata'; }
           var url = URL.createObjectURL(f);
           previewUrls.push(url);
           img.src = url;
@@ -120,9 +127,15 @@ function addInterview() {
     }
     function sync() { input.files = dt.files; render(); }
     function addFiles(files) {
+      files = Array.prototype.slice.call(files || []);
+      var overflow = false;
       for (var i = 0; i < files.length; i++) {
-        if (/^image\//.test(files[i].type || '') || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg)$/i.test(files[i].name || '')) dt.items.add(files[i]);
+        if (/^(image|video)\//.test(files[i].type || '') || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg|mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(files[i].name || '')) {
+          if (dt.files.length + remainingExisting() >= 10) overflow = true;
+          else dt.items.add(files[i]);
+        }
       }
+      if (notice) notice.textContent = overflow ? input.dataset.limitMessage : '';
       sync();
     }
     input.addEventListener('change', function () {

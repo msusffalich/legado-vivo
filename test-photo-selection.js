@@ -25,7 +25,7 @@ test('photo selection survives the Chromium live FileList and supports additiona
   form.querySelector = selector => fields[selector.match(/name="([^"]+)"/)[1]];
   const ids = { 'memory-form': form, 'photo-input': input, 'photo-drop': drop, 'photo-previews': preview };
   const document = { readyState: 'complete', handlers: {}, createElement: node,
-    getElementById: id => ids[id], addEventListener(type, fn) { this.handlers[type] = fn; } };
+    getElementById: id => ids[id], querySelectorAll: () => [], addEventListener(type, fn) { this.handlers[type] = fn; } };
   let urls = 0; const revoked = [];
   const window = {};
   vm.runInNewContext(fs.readFileSync('assets-app.js', 'utf8'), {
@@ -47,4 +47,11 @@ test('photo selection survives the Chromium live FileList and supports additiona
   assert.deepEqual(input.files.map(f => f.name), ['second.jpg', 'dropped.png']);
   document.handlers.paste({ clipboardData: { files: [{ name: 'pasted.jpeg', type: '' }] }, preventDefault() {} });
   assert.deepEqual(input.files.map(f => f.name), ['second.jpg', 'dropped.png', 'pasted.jpeg']);
+  drop.handlers.drop({ dataTransfer: { files: Array.from({ length: 9 }, (_, i) => ({ name: 'whatsapp-' + i + '.mp4', type: 'video/mp4' })) } });
+  assert.equal(input.files.length, 10);
+  assert.equal(input.files.filter(f => f.type === 'video/mp4').length, 7);
+  preview.children[9].children[2].handlers.click();
+  select([{ name: 'replacement.mov', type: '' }]);
+  assert.equal(input.files.length, 10);
+  assert.equal(input.files[9].name, 'replacement.mov');
 });

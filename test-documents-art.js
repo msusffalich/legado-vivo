@@ -36,14 +36,14 @@ test('documents extract PDF/Word/text, persist searchable narrative and enforce 
   const originalPhoto = Buffer.from('original-photo-kept');
   fs.writeFileSync(path.join(dir, 'original.jpg'), originalPhoto);
   records.set(108, { id: 108, family_id: 2, title: 'Anterior', photo_path: '/uploads/original.jpg', story: '', doc_text: '' });
-  const photos = new Map(); let sequence = 200;
+  const photos = new Map(), videos = new Map(); let sequence = 200;
   const db = require('./db'), oldQuery = db.query;
   db.query = async (sql, values) => {
     if (sql.includes('FROM families')) return { rows: [{ id: Number(values[0]), name: 'Familia' }] };
     if (sql.includes('FROM memberships')) return { rows: Number(values[0]) === 2 ? [{ role: 'admin' }] : [] };
     if (/INSERT INTO memories /.test(sql)) {
       const id = sequence++;
-      records.set(id, { id, family_id: values[0], title: values[1], story: values[2], doc_path: values[16], doc_name: values[17], doc_text: values[18] });
+      records.set(id, { id, family_id: values[0], title: values[1], story: values[2], photo_path: values[7], video_path: values[9], doc_path: values[16], doc_name: values[17], doc_text: values[18] });
       return { rows: [{ id }] };
     }
     if (sql.includes('FROM memories WHERE id=$1 AND family_id=$2')) {
@@ -55,6 +55,15 @@ test('documents extract PDF/Word/text, persist searchable narrative and enforce 
       return { rows: [...records.values()].filter(m => m.family_id === values[0] && m.doc_text.includes(term)) };
     }
     if (sql.includes('MAX(sort_order)')) return { rows: [{ m: -1 }] };
+    if (sql.includes('SELECT id, video_path FROM memory_videos')) return { rows: videos.get(values[0]) || [] };
+    if (sql.includes('INSERT INTO memory_videos')) {
+      const list = videos.get(values[0]) || []; list.push({ id: list.length + 1, video_path: values[1] }); videos.set(values[0], list); return { rows: [] };
+    }
+    if (sql.includes('DELETE FROM memory_videos')) { videos.set(values[0], (videos.get(values[0]) || []).filter(v => v.id !== values[1])); return { rows: [] }; }
+    if (sql.includes('SELECT photo_path FROM memory_photos')) return { rows: photos.get(values[0]) || [] };
+    if (sql.includes('DELETE FROM memory_photos')) { photos.set(values[0], []); return { rows: [] }; }
+    if (sql.includes('INSERT INTO memory_versions')) return { rows: [] };
+    if (sql.includes('UPDATE memories SET') && sql.includes('photo_path=$7')) { Object.assign(records.get(values[15]), { photo_path: values[6], video_path: values[8] }); return { rows: [] }; }
     if (sql.includes('SELECT id, photo_path FROM memory_photos')) return { rows: photos.get(values[0]) || [] };
     if (sql.includes('INSERT INTO memory_photos')) {
       const list = photos.get(values[0]) || []; list.push({ id: list.length + 1, photo_path: values[1] }); photos.set(values[0], list); return { rows: [] };
@@ -80,6 +89,35 @@ test('documents extract PDF/Word/text, persist searchable narrative and enforce 
     return fetch(base + route, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' }, body: data });
   }
   try {
+    async function batch(count, route = '/memories', removeVideo, kind) {
+      const data = new FormData(); data.append('title', 'WhatsApp mixed batch');
+      if (removeVideo) data.append('remove_video_ids', String(removeVideo));
+      for (let i = 0; i < count; i++) {
+        const video = kind === 'video' || (kind !== 'photo' && i % 2 === 1);
+        data.append('photo', new Blob(['fixture-' + i], { type: video ? 'video/mp4' : 'image/jpeg' }), 'whatsapp-' + i + (video ? '.mp4' : '.jpg'));
+      }
+      return fetch(base + route, { method: 'POST', headers: { Accept: 'application/json' }, body: data });
+    }
+    const ten = await batch(10); assert.equal(ten.status, 200, await ten.clone().text());
+    const mixedId = Number((await ten.json()).redirect.split('/').pop());
+    assert.equal(photos.get(mixedId).length, 5); assert.equal(videos.get(mixedId).length, 5);
+    assert.equal((await batch(1, '/memories/' + mixedId)).status, 400);
+    assert.equal(photos.get(mixedId).length + videos.get(mixedId).length, 10);
+    assert.equal((await batch(11)).status, 400);
+    const replacement = await batch(1, '/memories/' + mixedId, videos.get(mixedId)[4].id);
+    assert.equal(replacement.status, 200, await replacement.clone().text());
+    assert.equal(photos.get(mixedId).length, 6); assert.equal(videos.get(mixedId).length, 4);
+    for (const kind of ['photo', 'video']) {
+      const response = await batch(10, '/memories', null, kind);
+      assert.equal(response.status, 200, await response.clone().text());
+      const id = Number((await response.json()).redirect.split('/').pop());
+      assert.equal((photos.get(id) || []).length + (videos.get(id) || []).length, 10);
+    }
+    const editHtml = ejs.render(fs.readFileSync('view-memory-edit.ejs', 'utf8'), {
+      family: { id: 2 }, membership: { role: 'admin' }, memory: records.get(mixedId),
+      photos: photos.get(mixedId), videos: videos.get(mixedId), persons: [], linked: [], aiEnabled: false, memDateISO: () => '', t: key => t('es', key),
+    }, { filename: path.resolve('view-memory-edit.ejs') });
+    assert.match(editHtml, /data-existing="10"/); assert.match(editHtml, /remove_video_ids/);
     for (const [name, bytes, keyword] of [
       ['prueba.pdf', await pdf('NarrativaPDF2026'), 'NarrativaPDF2026'],
       ['prueba.docx', await word('NarrativaWord2026'), 'NarrativaWord2026'],
@@ -111,7 +149,8 @@ test('documents extract PDF/Word/text, persist searchable narrative and enforce 
     const art = await saved.json(); assert.equal(art.ok, true);
     assert.notEqual(art.photo_path, records.get(108).photo_path);
     assert.deepEqual(fs.readFileSync(path.join(dir, 'original.jpg')), originalPhoto);
-    assert.equal(photos.get(108).length, 1);
+    assert.equal(photos.get(108).length, 2);
+    assert.equal(photos.get(108)[0].photo_path, '/uploads/original.jpg');
     const html = ejs.render(fs.readFileSync('view-memory-show.ejs', 'utf8'), {
       family: { id: 2 }, membership: { role: 'admin' }, memory: { id: 108, title: 'Sin fotos', photos: [] },
       canWrite: true, persons: [], versions: [], author: null, t: key => t('es', key), fmtMemDate: () => '',

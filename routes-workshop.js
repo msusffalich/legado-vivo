@@ -96,6 +96,12 @@ async function resolveItems(blocks, familyId) {
       const memory = byId.get(photo.memory_id);
       if (memory) (memory.photo_paths = memory.photo_paths || []).push(photo.photo_path);
     }
+    const { rows: videos } = await db.query(
+      'SELECT mv.memory_id, mv.video_path FROM memory_videos mv JOIN memories m ON m.id=mv.memory_id WHERE mv.memory_id = ANY($1) AND m.family_id=$2 ORDER BY mv.sort_order, mv.id', [ids, familyId]);
+    for (const video of videos) {
+      const memory = byId.get(video.memory_id);
+      if (memory) (memory.video_paths = memory.video_paths || []).push(video.video_path);
+    }
   }
   return blocks
     .map((b) => (b.type === 'story'

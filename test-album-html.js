@@ -39,6 +39,7 @@ test('HTML export covers legacy/current albums, galleries, media and access cont
   fs.copyFileSync(path.join(uploadDir, 'first.jpg'), path.join(uploadDir, 'second.jpg'));
   fixture(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=0.1'], 'audio.wav');
   fixture(['-f', 'lavfi', '-i', 'color=c=blue:s=32x32:d=0.1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p'], 'video.mp4');
+  fs.copyFileSync(path.join(uploadDir, 'video.mp4'), path.join(uploadDir, 'second-video.mp4'));
   fs.writeFileSync(path.join(uploadDir, 'document.txt'), 'Original document');
   const memory = { id: 11, family_id: 2, title: 'Antes de octubre', memory_date: '2020-01-02',
     photo_path: '/uploads/first.jpg', audio_path: '/uploads/audio.wav', video_path: '/uploads/video.mp4',
@@ -64,6 +65,7 @@ test('HTML export covers legacy/current albums, galleries, media and access cont
       { memory_id: 11, photo_path: '/uploads/first.jpg' }, { memory_id: 11, photo_path: '/uploads/second.jpg' },
     ] : [] };
     if (sql.includes('FROM persons')) return { rows: [] };
+    if (sql.includes('FROM memory_videos')) return { rows: params[0].includes(11) ? [{ memory_id: 11, video_path: '/uploads/video.mp4' }, { memory_id: 11, video_path: '/uploads/second-video.mp4' }] : [] };
     throw new Error('Unexpected query: ' + sql);
   };
   const app = express();
@@ -90,6 +92,7 @@ test('HTML export covers legacy/current albums, galleries, media and access cont
       assert.equal(bytes.length, Number(response.headers.get('content-length')));
       const entries = unzipStored(bytes), html = entries.get('album.html').toString('utf8');
       assert.equal((html.match(/<img /g) || []).length, 2);
+      assert.equal((html.match(/<video /g) || []).length, 2);
       assert.match(html, /data:video\/mp4;base64,/); assert.match(html, /data:audio\/mpeg;base64,/);
       assert.match(html, /&lt;script&gt;never execute&lt;\/script&gt;/);
       assert.equal(entries.get('medios/archivo-0001.txt').toString(), 'Original document');
