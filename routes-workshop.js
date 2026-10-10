@@ -133,17 +133,25 @@ router.get('/new', canWrite, async (req, res) => {
 });
 
 router.post('/', canWrite, async (req, res) => {
-  const blocks = await cleanBlocks(req.family.id, req.body.blocks);
-  const title = (req.body.title || '').trim() || (req.lang === 'en' ? 'Untitled album' : 'Álbum sin título');
-  const narrative = (req.body.narrative || '').trim();
-  const theme = cleanTheme(req.body.theme);
-  if (!blocks.length) return res.redirect(`/families/${req.family.id}/workshop/new`);
-  const { rows: ins } = await db.query(
-    'INSERT INTO albums (family_id, title, narrative, theme, memory_ids, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-    [req.family.id, title, narrative, theme, JSON.stringify(blocks), req.session.user.id]
-  );
-  req.session.flash = req.t('album_created');
-  res.redirect(`/families/${req.family.id}/workshop/${ins[0].id}`);
+  try {
+    const blocks = await cleanBlocks(req.family.id, req.body.blocks);
+    const title = (req.body.title || '').trim() || (req.lang === 'en' ? 'Untitled album' : 'Álbum sin título');
+    const narrative = (req.body.narrative || '').trim();
+    const theme = cleanTheme(req.body.theme);
+    if (!blocks.length) return res.status(422).json({ ok: false, error: 'empty_album' });
+    const { rows: ins } = await db.query(
+      'INSERT INTO albums (family_id, title, narrative, theme, memory_ids, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+      [req.family.id, title, narrative, theme, JSON.stringify(blocks), req.session.user.id]
+    );
+    req.session.flash = req.t('album_created');
+    if (String(req.get('accept') || '').includes('application/json')) {
+      return res.json({ ok: true, redirect: `/families/${req.family.id}/workshop/${ins[0].id}` });
+    }
+    res.redirect(`/families/${req.family.id}/workshop/${ins[0].id}`);
+  } catch (err) {
+    console.error('[album:create]', err);
+    res.status(500).json({ ok: false, error: 'album_save_failed' });
+  }
 });
 
 // Editar álbum: mismo armador, con los bloques del álbum primero (en su orden).
@@ -170,15 +178,24 @@ router.get('/:aid/edit', canWrite, async (req, res) => {
 });
 
 router.post('/:aid', canWrite, async (req, res) => {
-  const blocks = await cleanBlocks(req.family.id, req.body.blocks);
-  const title = (req.body.title || '').trim() || (req.lang === 'en' ? 'Untitled album' : 'Álbum sin título');
-  const narrative = (req.body.narrative || '').trim();
-  const theme = cleanTheme(req.body.theme);
-  if (!blocks.length) return res.redirect(`/families/${req.family.id}/workshop/${req.params.aid}/edit`);
-  await db.query('UPDATE albums SET title=$1, narrative=$2, theme=$3, memory_ids=$4 WHERE id=$5 AND family_id=$6',
-    [title, narrative, theme, JSON.stringify(blocks), req.params.aid, req.family.id]);
-  req.session.flash = req.t('album_updated');
-  res.redirect(`/families/${req.family.id}/workshop/${req.params.aid}`);
+  try {
+    const blocks = await cleanBlocks(req.family.id, req.body.blocks);
+    const title = (req.body.title || '').trim() || (req.lang === 'en' ? 'Untitled album' : 'Álbum sin título');
+    const narrative = (req.body.narrative || '').trim();
+    const theme = cleanTheme(req.body.theme);
+    if (!blocks.length) return res.status(422).json({ ok: false, error: 'empty_album' });
+    const updated = await db.query('UPDATE albums SET title=$1, narrative=$2, theme=$3, memory_ids=$4 WHERE id=$5 AND family_id=$6 RETURNING id',
+      [title, narrative, theme, JSON.stringify(blocks), req.params.aid, req.family.id]);
+    if (!updated.rows.length) return res.status(404).json({ ok: false, error: 'album_not_found' });
+    req.session.flash = req.t('album_updated');
+    if (String(req.get('accept') || '').includes('application/json')) {
+      return res.json({ ok: true, redirect: `/families/${req.family.id}/workshop/${req.params.aid}` });
+    }
+    res.redirect(`/families/${req.family.id}/workshop/${req.params.aid}`);
+  } catch (err) {
+    console.error('[album:update]', err);
+    res.status(500).json({ ok: false, error: 'album_save_failed' });
+  }
 });
 
 router.get('/:aid', async (req, res) => {
