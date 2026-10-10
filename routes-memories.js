@@ -8,6 +8,7 @@ const { loadFamily, canWrite } = require('./mw');
 const { ensureVideoThumb, deleteVideoThumb } = require('./video-thumb');
 const { extractDocText } = require('./doc-extract');
 const { aiEnabled, generateMemoryComment } = require('./ai');
+const { buildSidecar, sidecarBaseName } = require('./sidecar');
 const { isSupportedVideoUrl, downloadVideoUrl, isSupportedImageUrl, downloadImageUrl, downloadInstagramImage } = require('./media-download');
 
 const router = express.Router({ mergeParams: true });
@@ -41,8 +42,6 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const mimeOk = /^(image|audio|video)\//.test(file.mimetype || '');
     const ext = path.extname(file.originalname || '').toLowerCase().replace(/^\./, '');
-    if (file.fieldname === 'photo' && !(/^(image|video)\//.test(file.mimetype || '') || IMAGE_EXT.has(ext) || VIDEO_EXT.has(ext))) return cb(new Error('badtype'), false);
-    if (file.fieldname === 'video' && !(/^video\//.test(file.mimetype || '') || VIDEO_EXT.has(ext))) return cb(new Error('badtype'), false);
     const ok = mimeOk || MEDIA_EXT.has(ext) || DOC_EXT.has(ext);
     cb(ok ? null : new Error('badtype'), ok);
   },
@@ -51,7 +50,7 @@ const PHOTO_MAX_COUNT = 10; // fotos por recuerdo en la galería
 const fields = upload.fields([
   { name: 'photo', maxCount: PHOTO_MAX_COUNT },
   { name: 'audio', maxCount: 1 },
-  { name: 'video', maxCount: PHOTO_MAX_COUNT },
+  { name: 'video', maxCount: 1 },
   { name: 'document', maxCount: 1 },
 ]);
 
@@ -77,11 +76,6 @@ async function processDocumentUpload(req) {
   if (!f) return null;
   const abs = path.join(UPLOAD_DIR, f.filename);
   const r = await extractDocText(abs, f.originalname || f.filename);
-  if (!r.ok) {
-    const error = new Error('Document text extraction failed');
-    error.code = 'DOC_EXTRACTION_FAILED';
-    throw error;
-  }
   return {
     docPath: '/uploads/' + f.filename,
     docName: f.originalname || f.filename,
@@ -111,16 +105,6 @@ function deleteDocFile(docPath) {
 // Revisa que las fotos y el audio no pasen de MEDIA_MAX_MB (el video ya está
 // limitado a VIDEO_MAX_MB por multer) y que el documento no pase de DOC_MAX_MB.
 function checkMediaSizes(req) {
-  // The shared picker submits both kinds under photo; split before saving.
-  const files = req.files || {};
-  const mixed = files.photo || [];
-  const videos = mixed.filter(f => /^video\//.test(f.mimetype || '') || VIDEO_EXT.has(path.extname(f.originalname).slice(1).toLowerCase()));
-  if (videos.length) {
-    files.photo = mixed.filter(f => !videos.includes(f));
-    if (!files.photo.length) delete files.photo;
-    files.video = (files.video || []).concat(videos);
-  }
-  if ((files.photo || []).length + (files.video || []).length > PHOTO_MAX_COUNT) return Object.assign(new Error('Media limit'), { code: 'PHOTO_LIMIT' });
   for (const name of ['audio']) {
     const f = req.files && req.files[name] && req.files[name][0];
     if (f && f.size > MEDIA_MAX_MB * 1024 * 1024) return new Error('toobig:' + name);
@@ -154,22 +138,6 @@ async function loadMemoryPhotos(mid) {
   return rows;
 }
 
-async function loadMemoryVideos(mid) {
-  const { rows } = await db.query('SELECT id, video_path FROM memory_videos WHERE memory_id=$1 ORDER BY sort_order, id', [mid]);
-  return rows;
-}
-async function saveMemoryVideos(mid, files) {
-  const existing = await loadMemoryVideos(mid);
-  let order = existing.reduce((max, v) => Math.max(max, v.sort_order || 0), -1) + 1;
-  for (const f of files || []) {
-    await db.query('INSERT INTO memory_videos (memory_id, video_path, sort_order) VALUES ($1,$2,$3)', [mid, '/uploads/' + f.filename, order++]);
-    ensureVideoThumb(path.join(UPLOAD_DIR, f.filename));
-  }
-}
-function requestedIds(body, key) {
-  return (Array.isArray(body[key]) ? body[key] : String(body[key] || '').split(',')).map(String);
-}
-
 // Borra el archivo físico de una foto de la galería.
 function deletePhotoFile(photoPath) {
   if (!photoPath) return;
@@ -185,8 +153,6 @@ function uploadFail(req, res, err, fallback) {
     msg = req.t('upload_too_large', { max });
   }
   else if (err && err.message === 'badtype') msg = req.t('upload_bad_type');
-  else if (err && err.code === 'DOC_EXTRACTION_FAILED') msg = req.t('doc_extract_failed');
-  else if (err && (err.code === 'PHOTO_LIMIT' || (err.code === 'LIMIT_UNEXPECTED_FILE' && ['photo', 'video'].includes(err.field)))) msg = req.t('photos_limit_error');
   else msg = req.t('error_generic');
   cleanupUploads(req.files);
   if (isXhr(req)) return res.status(400).json({ ok: false, error: msg });
@@ -222,11 +188,7 @@ function queueVideoDownload(memoryId, url) {
     const fname = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.mp4';
     const dest = path.join(UPLOAD_DIR, fname);
     const r = await downloadVideoUrl(url, dest);
-    if (r.ok && (await loadMemoryPhotos(memoryId)).length + (await loadMemoryVideos(memoryId)).length >= PHOTO_MAX_COUNT) {
-      deletePhotoFile('/uploads/' + fname); r.ok = false; r.error = 'Maximum 10 photos and videos per memory';
-    }
     if (r.ok) {
-      await saveMemoryVideos(memoryId, [{ filename: fname }]);
       await db.query(
         `UPDATE memories SET video_path=$1, video_dl_status='ready', video_dl_error=NULL, updated_at=now() WHERE id=$2`,
         ['/uploads/' + fname, memoryId]
@@ -252,9 +214,6 @@ function queueImageDownload(memoryId, url) {
     const r = host === 'instagram.com'
       ? await downloadInstagramImage(url, UPLOAD_DIR)
       : await downloadImageUrl(url, UPLOAD_DIR);
-    if (r.ok && (await loadMemoryPhotos(memoryId)).length + (await loadMemoryVideos(memoryId)).length >= PHOTO_MAX_COUNT) {
-      deletePhotoFile('/uploads/' + r.filename); r.ok = false; r.error = 'Maximum 10 photos and videos per memory';
-    }
     if (r.ok) {
       const p = '/uploads/' + r.filename;
       const { rows: has } = await db.query('SELECT 1 FROM memory_photos WHERE memory_id=$1 LIMIT 1', [memoryId]);
@@ -380,7 +339,6 @@ router.post('/', canWrite, (req, res, next) => {
   if (req.files && req.files.photo && req.files.photo.length) {
     await saveMemoryPhotos(mid, req.files.photo, false);
   }
-  await saveMemoryVideos(mid, (req.files && req.files.video) || []);
   const doneCreateUrl = `/families/${req.family.id}/memories/${mid}`;
   // Miniatura del video en segundo plano (no bloquea la respuesta).
   if (video) ensureVideoThumb(path.join(UPLOAD_DIR, path.basename(video)));
@@ -391,7 +349,6 @@ router.post('/', canWrite, (req, res, next) => {
   req.session.flash = req.t('memory_created');
   res.redirect(doneCreateUrl);
   } catch (e) {
-    if (['DOC_EXTRACTION_FAILED', 'PHOTO_LIMIT'].includes(e.code)) return uploadFail(req, res, e, `/families/${req.family.id}/memories/new`);
     cleanupUploads(req.files);
     if (isXhr(req)) return res.status(500).json({ ok: false, error: req.t('upload_server_error') });
     return next(e);
@@ -406,7 +363,6 @@ router.get('/:mid', async (req, res) => {
   const m = rows[0];
   m.people_names = await peopleNames(null, m.id);
   m.photos = await loadMemoryPhotos(mid);
-  m.videos = await loadMemoryVideos(mid);
   const { rows: ppl } = await db.query(
     'SELECT p.* FROM persons p JOIN memory_people mp ON mp.person_id=p.id WHERE mp.memory_id=$1 ORDER BY p.name', [mid]);
   const { rows: author } = await db.query('SELECT name FROM users WHERE id=$1', [m.created_by]);
@@ -427,10 +383,9 @@ router.get('/:mid/edit', canWrite, async (req, res) => {
   const { rows: persons } = await db.query('SELECT * FROM persons WHERE family_id=$1 ORDER BY name', [req.family.id]);
   const { rows: linked } = await db.query('SELECT person_id FROM memory_people WHERE memory_id=$1', [mid]);
   const photos = await loadMemoryPhotos(mid);
-  const videos = await loadMemoryVideos(mid);
   res.render('view-layout', {
     page: 'view-memory-edit', title: req.t('edit_memory'),
-    family: req.family, membership: req.membership, memory: rows[0], persons, photos, videos,
+    family: req.family, membership: req.membership, memory: rows[0], persons, photos,
     linked: linked.map((r) => r.person_id),
     aiEnabled: aiEnabled(),
   });
@@ -452,28 +407,6 @@ router.post('/:mid', canWrite, (req, res, next) => {
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const old = rows[0];
   const b = req.body;
-  const incoming = (req.files && req.files.photo) || [];
-  const incomingVideos = (req.files && req.files.video) || [];
-  const existing = await loadMemoryPhotos(mid);
-  const existingVideos = await loadMemoryVideos(mid);
-  const kept = existing.filter(ph => !requestedIds(b, 'remove_photo_ids').includes(String(ph.id)));
-  const keptVideos = existingVideos.filter(v => !requestedIds(b, 'remove_video_ids').includes(String(v.id)));
-  const legacyPhoto = !existing.length && old.photo_path ? 1 : 0;
-  const legacyVideo = !existingVideos.length && old.video_path ? 1 : 0;
-  if (incoming.length + incomingVideos.length && kept.length + keptVideos.length + legacyPhoto + legacyVideo + incoming.length + incomingVideos.length > PHOTO_MAX_COUNT) {
-    return uploadFail(req, res, { code: 'PHOTO_LIMIT' }, '/families/' + req.family.id + '/memories/' + mid + '/edit');
-  }
-  // Validate a replacement document before changing the existing memory/files.
-  const newDoc = await processDocumentUpload(req);
-  // Preserve legacy principal files only after all upload validation succeeds.
-  if (legacyPhoto && incoming.length) await db.query('INSERT INTO memory_photos (memory_id, photo_path, sort_order) VALUES ($1,$2,$3)', [mid, old.photo_path, 0]);
-  if (legacyVideo && incomingVideos.length) await db.query('INSERT INTO memory_videos (memory_id, video_path, sort_order) VALUES ($1,$2,$3)', [mid, old.video_path, 0]);
-  for (const v of existingVideos.filter(v => !keptVideos.includes(v))) {
-    await db.query('DELETE FROM memory_videos WHERE memory_id=$1 AND id=$2', [mid, v.id]);
-    deletePhotoFile(v.video_path); deleteVideoThumb(path.join(UPLOAD_DIR, path.basename(v.video_path)));
-  }
-  await saveMemoryVideos(mid, incomingVideos);
-  const videoGallery = await loadMemoryVideos(mid);
   // Instantánea de la versión anterior
   await db.query('INSERT INTO memory_versions (memory_id, data, created_by) VALUES ($1,$2,$3)',
     [mid, JSON.stringify(old), req.session.user.id]);
@@ -500,8 +433,7 @@ router.post('/:mid', canWrite, (req, res, next) => {
   const galleryTouched = (req.files && req.files.photo && req.files.photo.length > 0) || removeIds.length > 0;
   const photo = galleryTouched ? (gallery.length ? gallery[0].photo_path : null) : old.photo_path;
   const audio = req.files && req.files.audio ? '/uploads/' + req.files.audio[0].filename : old.audio_path;
-  const videoTouched = incomingVideos.length || existingVideos.length !== keptVideos.length;
-  const video = videoTouched ? (videoGallery[0] ? videoGallery[0].video_path : null) : old.video_path;
+  const video = req.files && req.files.video ? '/uploads/' + req.files.video[0].filename : old.video_path;
   const videoUrl = (b.video_url || '').trim() || null;
   const photoUrl = (b.photo_url || '').trim() || null;
   const urlChanged = videoUrl !== (old.video_url || null);
@@ -511,6 +443,7 @@ router.post('/:mid', canWrite, (req, res, next) => {
   const title = (b.title || '').trim() || old.title;
   // Documento: reemplazo, eliminación o se conserva el anterior.
   let docPath = old.doc_path, docName = old.doc_name, docText = old.doc_text || '';
+  const newDoc = await processDocumentUpload(req);
   if (newDoc) {
     deleteDocFile(old.doc_path);
     docPath = newDoc.docPath; docName = newDoc.docName; docText = newDoc.docText;
@@ -544,6 +477,13 @@ router.post('/:mid', canWrite, (req, res, next) => {
     await db.query('INSERT INTO memory_people (memory_id, person_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [mid, pid]);
   }
   const doneEditUrl = `/families/${req.family.id}/memories/${mid}`;
+  // Si se reemplazó el video, regenerar su miniatura en segundo plano.
+  if (req.files && req.files.video) {
+    if (old.video_path && old.video_path !== video) {
+      deleteVideoThumb(path.join(UPLOAD_DIR, path.basename(old.video_path)));
+    }
+    ensureVideoThumb(path.join(UPLOAD_DIR, path.basename(video)));
+  }
   // Nueva URL de video: descargar en segundo plano.
   if (videoUrl && urlChanged && !req.files.video) queueVideoDownload(mid, videoUrl);
   // Nueva URL de foto: descargar en segundo plano.
@@ -552,7 +492,6 @@ router.post('/:mid', canWrite, (req, res, next) => {
   req.session.flash = req.t('memory_updated');
   res.redirect(doneEditUrl);
   } catch (e) {
-    if (e.code === 'DOC_EXTRACTION_FAILED') return uploadFail(req, res, e, `/families/${req.family.id}/memories/${req.params.mid}/edit`);
     cleanupUploads(req.files);
     if (isXhr(req)) return res.status(500).json({ ok: false, error: req.t('upload_server_error') });
     return next(e);
@@ -565,7 +504,6 @@ router.get('/:mid/art', canWrite, async (req, res) => {
   const { rows } = await db.query('SELECT * FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
   if (!rows.length) return res.status(404).render('view-layout', { page: 'view-error', title: '404', message: req.t('not_found') });
   const photos = await loadMemoryPhotos(mid);
-  if (!photos.length && rows[0].photo_path) photos.push({ photo_path: rows[0].photo_path });
   res.render('view-layout', {
     page: 'view-art-editor', title: req.t('art_editor_title'),
     family: req.family, membership: req.membership, memory: rows[0], photos,
@@ -595,19 +533,12 @@ router.post('/:mid/art-photo', canWrite, (req, res, next) => {
 }, async (req, res) => {
   try {
     const mid = parseInt(req.params.mid, 10);
-    const { rows } = await db.query('SELECT * FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
+    const { rows } = await db.query('SELECT id FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
     if (!rows.length) {
       if (req.file) deletePhotoFile('/uploads/' + req.file.filename);
       return res.status(404).json({ ok: false, error: req.t('not_found') });
     }
     if (!req.file) return res.status(400).json({ ok: false, error: req.t('upload_bad_type') });
-    const photos = await loadMemoryPhotos(mid), videos = await loadMemoryVideos(mid);
-    const count = Math.max(photos.length, rows[0].photo_path ? 1 : 0) + Math.max(videos.length, rows[0].video_path ? 1 : 0);
-    if (count >= PHOTO_MAX_COUNT) {
-      deletePhotoFile('/uploads/' + req.file.filename);
-      return res.status(400).json({ ok: false, error: req.t('photos_limit_error') });
-    }
-    if (!photos.length && rows[0].photo_path) await db.query('INSERT INTO memory_photos (memory_id, photo_path, sort_order) VALUES ($1,$2,$3)', [mid, rows[0].photo_path, 0]);
     const saved = await saveMemoryPhotos(mid, [req.file], true);
     // Si era la primera foto, también queda como principal.
     await db.query(`UPDATE memories SET photo_path = COALESCE(photo_path, $1), updated_at=now() WHERE id=$2`, [saved[0], mid]);
@@ -618,13 +549,29 @@ router.post('/:mid/art-photo', canWrite, (req, res, next) => {
   }
 });
 
+// ---- Sidecar .md: frontmatter YAML con fecha/lugar/personas/diario ----
+// El archivo viaja junto al documento del recuerdo (mismo nombre base, con
+// extensión .md) para que el proceso que genera las notas del vault de
+// Obsidian lea los datos estructurados sin extraerlos del PDF/documento.
+router.get('/:mid/sidecar', async (req, res) => {
+  const mid = parseInt(req.params.mid, 10);
+  const { rows } = await db.query('SELECT * FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
+  if (!rows.length) return res.status(404).send('No encontrado');
+  const m = rows[0];
+  const { rows: ppl } = await db.query(
+    'SELECT p.name FROM persons p JOIN memory_people mp ON mp.person_id=p.id WHERE mp.memory_id=$1 ORDER BY p.name',
+    [mid]
+  );
+  const body = buildSidecar(m, ppl.map((r) => r.name));
+  const base = sidecarBaseName(m);
+  res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${base}.md"`);
+  res.send(body);
+});
+
 router.post('/:mid/delete', canWrite, async (req, res) => {
   const mid = parseInt(req.params.mid, 10);
-  const { rows: owned } = await db.query('SELECT id FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
-  if (!owned.length) return res.status(404).send(req.t('not_found'));
-  for (const v of await loadMemoryVideos(mid)) { deletePhotoFile(v.video_path); deleteVideoThumb(path.join(UPLOAD_DIR, path.basename(v.video_path))); }
-  const { rows: ph } = await db.query('SELECT photo_path FROM memory_photos WHERE memory_id=$1', [mid]);
-  for (const r of ph) deletePhotoFile(r.photo_path);
+  const { rows: ph } = await db.query('SELECT photo_path FROM memory_photos WHERE memory_id=$1', [mid]).catch(() => ({ rows: [] }));  for (const r of ph) deletePhotoFile(r.photo_path);
   const { rows: old } = await db.query('SELECT audio_path, video_path, doc_path FROM memories WHERE id=$1 AND family_id=$2', [mid, req.family.id]);
   for (const o of old) {
     deletePhotoFile(o.audio_path); deletePhotoFile(o.video_path); deleteDocFile(o.doc_path);

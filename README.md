@@ -32,7 +32,13 @@ Legado Vivo es el archivo privado de tu familia:
   como una foto más del recuerdo.
   **Documentos**: adjunta un PDF, Word (.docx) o texto (.txt, .md) (máx. 25 MB): el archivo original queda
   disponible para descargar y su contenido se extrae como narrativa del recuerdo (y queda buscable en la
-  búsqueda por palabras). **Comentario de la IA** (opcional, requiere clave de OpenAI en el servidor):
+  búsqueda por palabras). **Sidecar .md**: junto al botón de descarga del documento hay otro botón
+  («Descargar sidecar .md») que baja un archivo `.md` con el mismo nombre base (ej. `Mi-recuerdo.pdf` →
+  `Mi-recuerdo.md`) con los datos estructurados del recuerdo como frontmatter YAML (`fecha`, `lugar`,
+  `personas`, `diario` con el wikilink del Diario en formato «Viernes 9 de octubre de 2026»): sirve para que
+  el proceso que genera las notas del vault de Obsidian los lea directamente sin extraerlos del documento.
+  La fecha se omite si no hay o es aproximada-desconocida (`date_precision = 'unknown'`); nunca se inventan fechas.
+  **Comentario de la IA** (opcional, requiere clave de OpenAI en el servidor):
   la casilla «Generar comentario con IA» produce un comentario cálido y breve a partir del título y la narrativa;
   se puede regenerar al editar el recuerdo.
   **Sin subir archivos**: el campo «Video por URL» acepta un enlace público de **YouTube o Instagram**
@@ -139,6 +145,10 @@ Ejemplo de cuerpo:
 El borrador se crea como recuerdo **pendiente de completar** (sin duplicar si el `draftId`
 ya existe). Luego lo completas en la app.
 
+**Nota:** cada llamada lleva una sola foto (`photoBase64`) y crea un borrador. Para varias
+fotos se hacen varias llamadas (un borrador por foto). Solo en la app se pueden juntar
+hasta 10 fotos en un solo recuerdo.
+
 ### 5. Desarrollo local
 
 ```bash
@@ -172,7 +182,14 @@ Legado Vivo is your family's private archive:
   version is saved as another photo of the memory.
   **Documents**: attach a PDF, Word (.docx) or text (.txt, .md) file (max 25 MB): the original file stays
   available for download and its content is extracted as the memory's narrative (and becomes searchable
-  with keyword search). **AI comment** (optional, needs an OpenAI key on the server): the “Generate AI comment”
+  with keyword search). **Sidecar .md**: next to the document download button there is another button
+  ("Download sidecar .md") that downloads a `.md` file with the same base name (e.g. `Mi-recuerdo.pdf` →
+  `Mi-recuerdo.md`) carrying the memory's structured data as YAML frontmatter (`fecha`, `lugar`,
+  `personas`, `diario` with the Diary wikilink as "Viernes 9 de octubre de 2026"): it lets the process
+  that generates the Obsidian vault notes read them directly without extracting them from the document.
+  The date is omitted when missing or when its precision is unknown (`date_precision = 'unknown'`);
+  dates are never invented.
+  **AI comment** (optional, needs an OpenAI key on the server): the “Generate AI comment”
   checkbox produces a short, warm comment from the title and narrative; it can be regenerated when editing the memory.
   **Without uploading files**: the “Video by URL” field accepts a public **YouTube or Instagram**
   link (e.g. `https://www.youtube.com/watch?v=…` or `https://www.instagram.com/reel/…`): the server
@@ -278,6 +295,10 @@ Body example:
 The draft becomes a **pending completion** memory (no duplicates when `draftId` exists).
 Then finish it in the app.
 
+**Note:** each call carries a single photo (`photoBase64`) and creates one draft. For several
+photos, make several calls (one draft per photo). Only in the app can up to 10 photos be
+grouped into a single memory.
+
 ### 5. Local development
 
 ```bash
@@ -306,6 +327,7 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
 | `video-thumb.js` | Extrae el primer cuadro del video como miniatura (ffmpeg) |
 | `media-download.js` | Descarga de video (YouTube/Instagram) y foto por URL (yt-dlp / HTTP) |
 | `doc-extract.js` | Extrae narrativa de documentos: PDF (pdf-parse), Word (.docx, mammoth), texto |
+| `sidecar.js` | Genera el `.md` acompañante del recuerdo: frontmatter YAML con `fecha`, `lugar`, `personas` y `diario` (ruta `/:mid/sidecar`) |
 | `ai.js` | Búsqueda conversacional, generación de historias y comentarios cálidos de IA |
 | `routes-*.js` | Rutas: auth, familias, personas, recuerdos, historias, taller, búsqueda, puente, cuenta |
 | `view-*.ejs` | Vistas / *Views* (layout + páginas) |
@@ -333,6 +355,25 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
+- Versión 1.4.2 — 2026-10-10: **sidecar .md del recuerdo** — junto al botón de descarga del
+  documento hay un botón «Descargar sidecar .md»: baja un `.md` con el mismo nombre base que el documento
+  (ej. `Mi-recuerdo.pdf` → `Mi-recuerdo.md`) con los datos estructurados como frontmatter YAML (`fecha`
+  en AAAA-MM-DD, `lugar` tal cual está en la BD, `personas` de la tabla `persons`, `diario` con el wikilink
+  del Diario en formato «Viernes 9 de octubre de 2026»). Lo genera al vuelo la ruta `GET
+  /families/:fid/memories/:mid/sidecar` (nuevo módulo `sidecar.js`; sin archivos en disco, siempre
+  actualizado; respeta la membresía de la familia). La fecha se omite si es NULL o su precisión es
+  `'unknown'` — nunca se inventan fechas. Sirve para que el proceso que genera las notas del vault de
+  Obsidian lea fecha/lugar/personas/diario directamente. Todo bilingüe ES/EN (nueva clave
+  `sidecar_download`). /
+  *Version 1.4.2 — 2026-10-10: **memory sidecar .md** — next to the document download button there is a
+  "Download sidecar .md" button: it downloads a `.md` with the same base name as the document
+  (e.g. `Mi-recuerdo.pdf` → `Mi-recuerdo.md`) carrying the structured data as YAML frontmatter (`fecha`
+  as AAAA-MM-DD, `lugar` as stored in the DB, `personas` from the `persons` table, `diario` with the
+  Diary wikilink as "Viernes 9 de octubre de 2026"). It is generated on the fly by the new `GET
+  /families/:fid/memories/:mid/sidecar` route (new `sidecar.js` module; no files on disk, always current;
+  honors family membership). The date is omitted when NULL or its precision is `'unknown'` — dates are
+  never invented. It lets the process that generates the Obsidian vault notes read date/place/people/diary
+  directly. All bilingual ES/EN (new `sidecar_download` key).*
 - Versión 1.4.0 — 2026-10-08: **mejoras de octubre** — (1) **varias fotos por recuerdo** (hasta 10;
   selección múltiple, arrastrar y soltar, vista previa antes de guardar, pegar varias a la vez; galería
   con opción de quitar fotos al editar; migración `migration-007.sql`); (2) **editor artístico** (botón 🎨
