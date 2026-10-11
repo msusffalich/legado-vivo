@@ -10,7 +10,9 @@ INCLUYE
 - Movimiento individual y múltiple, posición y desplazamiento automático.
 - Borrador de álbum para recuperación tras fallo de guardado.
 - Cargas mixtas de fotos/videos, documentos y editor artístico recuperados.
-- Descargar sidecar .md desde Taller y desde cada recuerdo, con o sin documento.
+- UN Markdown por álbum: botón Descargar álbum .md inmediatamente junto a PDF.
+- Incluye título, narrativa, historias, recuerdos y frontmatter en el orden guardado.
+- Se retiraron los botones individuales de sidecar de los recuerdos.
 - Fecha guardada válida, lugar y personas vinculadas: sin IA ni fechas de carga.
 - Fecha ausente/desconocida/inválida: se omite. Aproximada: marcada como approx.
 - Interfaz y ayuda en español e inglés.
@@ -27,7 +29,7 @@ Este paquete no contiene claves, archivos personales ni una copia de la base.
 La aplicación ejecuta las migraciones pendientes al iniciar.
 
 VALIDACIÓN
-npm test: 8 pruebas aprobadas (HTTP con datos simulados, extracción de documentos,
+npm test: 9 pruebas aprobadas (HTTP con datos simulados, extracción de documentos,
 selección de medios, exportación HTML, sidecar, permisos y creación/edición).
 Todos los archivos JavaScript pasan node --check.
 Producción y recorrido visual completo no verificados en este entorno.

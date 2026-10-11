@@ -3,6 +3,7 @@ const express = require('express');
 const db = require('./db');
 const { canWrite, requireAdmin } = require('./mw');
 const { generateAlbumPDF } = require('./pdfgen');
+const { buildAlbumMarkdown, albumMarkdownName } = require('./album-markdown');
 const { THEME_IDS } = require('./album-themes');
 const { prepareAlbumHTML, albumZip } = require('./album-html');
 const { Readable } = require('node:stream');
@@ -225,6 +226,28 @@ router.get('/:aid/download', async (req, res) => {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${fname}.pdf"`);
   res.send(pdf);
+});
+
+// One Markdown file for the saved album, preserving memory and story order.
+router.get('/:aid/download-md', async (req, res, next) => {
+  try {
+    const { rows } = await db.query('SELECT * FROM albums WHERE id=$1 AND family_id=$2', [req.params.aid, req.family.id]);
+    if (!rows.length) return res.status(404).send(req.t('not_found'));
+    const album = rows[0], blocks = normalizeBlocks(album.memory_ids), ids = blocksMemoryIds(blocks);
+    const byId = new Map();
+    if (ids.length) {
+      const { rows: memories } = await db.query('SELECT m.*, m.memory_date::text AS memory_date FROM memories m WHERE m.id = ANY($1) AND m.family_id=$2', [ids, req.family.id]);
+      const { rows: people } = await db.query('SELECT mp.memory_id, p.name FROM memory_people mp JOIN persons p ON p.id=mp.person_id JOIN memories m ON m.id=mp.memory_id WHERE mp.memory_id = ANY($1) AND m.family_id=$2 AND p.family_id=$2 ORDER BY p.name', [ids, req.family.id]);
+      for (const m of memories) byId.set(m.id, { ...m, people: [] });
+      for (const p of people) if (byId.has(p.memory_id)) byId.get(p.memory_id).people.push(p.name);
+    }
+    const items = blocks.map(b => b.type === 'story' ? { kind: 'story', title: b.title, text: b.text } : byId.has(b.id) ? { kind: 'memory', memory: byId.get(b.id) } : null).filter(Boolean);
+    res.attachment(albumMarkdownName(album));
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(buildAlbumMarkdown({ album, items, lang: req.lang }));
+  } catch (error) { next(error); }
 });
 
 // The same on-demand export works for legacy numeric ids and current story blocks.

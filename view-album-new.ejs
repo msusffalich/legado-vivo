@@ -102,10 +102,6 @@
         <span><strong><%= m.title %></strong><br>
         <span class="muted small"><%= fmtMemDate(m) %><% if (m.people_names) { %> · <%= m.people_names %><% } %></span></span>
       </label>
-      <span class="sidecar-actions">
-        <% if (m.doc_path) { %><a class="btn ghost small" href="<%= m.doc_path %>" target="_blank" rel="noopener"><%= t('doc_download') %></a><% } %>
-        <a class="btn ghost small" download href="/families/<%= family.id %>/memories/<%= m.id %>/sidecar">⬇ <%= t('sidecar_download') %></a>
-      </span>
       <span class="pickmove">
         <button type="button" class="btn tiny ghost" data-move="-1" title="<%= t('move_up') %>">↑</button>
         <button type="button" class="btn tiny ghost" data-move="1" title="<%= t('move_down') %>">↓</button>
@@ -133,7 +129,6 @@
 #albumForm .move-check { width: 20px; height: 20px; margin: 0; }
 #albumForm .pick.move-selected { background: #edf6ff; outline: 2px solid #397cb0; outline-offset: -2px; }
 #albumForm .drag-handle { padding: 14px 7px; touch-action: none; flex-shrink: 0; }
-#albumForm .sidecar-actions { display: flex; flex-wrap: wrap; gap: .3rem; max-width: 210px; }
 #albumForm .picklabel, #albumForm .storyedit { min-width: 0; overflow-wrap: anywhere; }
 #albumForm .move-marker { height: 6px; background: #1966b2; border-radius: 3px; pointer-events: none; }
 .move-badge { position: fixed; z-index: 9999; max-width: 250px; padding: 9px 12px; background: #164c78; color: white; border-radius: 8px; pointer-events: none; font-size: 14px; }

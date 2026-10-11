@@ -68,14 +68,3 @@ test('sidecar download supports Unicode, no document, readers, family isolation 
   } finally { db.query = previous; await new Promise(resolve => server.close(resolve)); }
 });
 
-test('each memory exposes a translated sidecar link with and without a document', () => {
-  for (const lang of ['es', 'en']) for (const doc_path of [null, '/uploads/document.pdf']) {
-    const memory = { id: 11, title: 'Recuerdo', doc_path, doc_name: 'document.pdf' };
-    const html = ejs.render(fs.readFileSync('view-memory-show.ejs', 'utf8'), {
-      family: { id: 2 }, membership: { role: 'reader' }, memory, canWrite: false, persons: [], versions: [], author: null,
-      t: (key, args) => t(lang, key, args), fmtMemDate: () => '',
-    }, { filename: require('node:path').resolve('view-memory-show.ejs') });
-    assert.equal((html.match(/\/memories\/11\/sidecar/g) || []).length, 1);
-    assert(html.includes(t(lang, 'sidecar_download')));
-  }
-});

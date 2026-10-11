@@ -55,12 +55,11 @@
   <% if (memory.story) { %><p class="story"><%= memory.story %></p><% } %>
   <% if (memory.doc_path) { %>
     <h4>📄 <%= t('doc_label') %></h4>
-    <p><a class="btn ghost small" href="<%= memory.doc_path %>" target="_blank" rel="noopener">⬇ <%= t('doc_download') %>: <%= memory.doc_name || 'documento' %></a> <a class="btn ghost small" download href="/families/<%= family.id %>/memories/<%= memory.id %>/sidecar">⬇ <%= t('sidecar_download') %></a></p>
+    <p><a class="btn ghost small" href="<%= memory.doc_path %>" target="_blank" rel="noopener">⬇ <%= t('doc_download') %>: <%= memory.doc_name || 'documento' %></a></p>
     <% if (memory.doc_text) { %>
       <h4><%= t('doc_narrative_label') %></h4><p class="story muted"><%= memory.doc_text %></p>
     <% } else { %><p class="muted small"><%= t('doc_no_text') %></p><% } %>
   <% } %>
-  <% if (!memory.doc_path) { %><p><a class="btn ghost small" download href="/families/<%= family.id %>/memories/<%= memory.id %>/sidecar">⬇ <%= t('sidecar_download') %></a></p><% } %>
   <% if (memory.ai_comment) { %>
     <div class="ai-comment"><span class="ai-star">✦</span><div><strong><%= t('ai_comment_label') %></strong><p><%= memory.ai_comment %></p></div></div>
   <% } %>

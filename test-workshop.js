@@ -44,13 +44,12 @@ test('workshop renders valid scripts, sidecars, and restored HTML/PDF downloads 
       memDateISO: () => '', fmtMemDate: () => '', fmtDate: () => '', canWrite: true };
     const html = ejs.render(fs.readFileSync('view-album-new.ejs', 'utf8'), data, { filename: path.resolve('view-album-new.ejs') });
     for (const match of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
-    assert.match(html, /\/memories\/11\/sidecar/);
-    assert.match(html, /href="\/uploads\/original.pdf"/);
+    assert.doesNotMatch(html, /\/sidecar/);
     assert.match(html, /id="movePosition"/);
     const show = ejs.render(fs.readFileSync('view-album-show.ejs', 'utf8'), {
       ...data, album: { id: 9, title: 'Álbum' }, memCount: 1, items: [{ kind: 'memory', memory: m }],
     }, { filename: path.resolve('view-album-show.ejs') });
     assert.match(show, /\/workshop\/9\/download-html/); assert.match(show, /\/workshop\/9\/download"/);
-    assert.match(show, /\/memories\/11\/sidecar/);
+    assert.match(show, /\/workshop\/9\/download-md/); assert.doesNotMatch(show, /\/sidecar/);
   }
 });

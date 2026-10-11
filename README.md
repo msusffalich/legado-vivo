@@ -32,13 +32,7 @@ Legado Vivo es el archivo privado de tu familia:
   como una foto más del recuerdo.
   **Documentos**: adjunta un PDF, Word (.docx) o texto (.txt, .md) (máx. 25 MB): el archivo original queda
   disponible para descargar y su contenido se extrae como narrativa del recuerdo (y queda buscable en la
-  búsqueda por palabras). **Sidecar .md**: junto al botón de descarga del documento hay otro botón
-  («Descargar sidecar .md») que baja un archivo `.md` con el mismo nombre base (ej. `Mi-recuerdo.pdf` →
-  `Mi-recuerdo.md`) con los datos estructurados del recuerdo como frontmatter YAML (`fecha`, `lugar`,
-  `personas`, `diario` con el wikilink del Diario en formato «Viernes 9 de octubre de 2026»): sirve para que
-  el proceso que genera las notas del vault de Obsidian los lea directamente sin extraerlos del documento.
-  La fecha se omite si no hay o es aproximada-desconocida (`date_precision = 'unknown'`); nunca se inventan fechas.
-  **Comentario de la IA** (opcional, requiere clave de OpenAI en el servidor):
+  búsqueda por palabras). **Comentario de la IA** (opcional, requiere clave de OpenAI en el servidor):
   la casilla «Generar comentario con IA» produce un comentario cálido y breve a partir del título y la narrativa;
   se puede regenerar al editar el recuerdo.
   **Sin subir archivos**: el campo «Video por URL» acepta un enlace público de **YouTube o Instagram**
@@ -145,10 +139,6 @@ Ejemplo de cuerpo:
 El borrador se crea como recuerdo **pendiente de completar** (sin duplicar si el `draftId`
 ya existe). Luego lo completas en la app.
 
-**Nota:** cada llamada lleva una sola foto (`photoBase64`) y crea un borrador. Para varias
-fotos se hacen varias llamadas (un borrador por foto). Solo en la app se pueden juntar
-hasta 10 fotos en un solo recuerdo.
-
 ### 5. Desarrollo local
 
 ```bash
@@ -182,14 +172,7 @@ Legado Vivo is your family's private archive:
   version is saved as another photo of the memory.
   **Documents**: attach a PDF, Word (.docx) or text (.txt, .md) file (max 25 MB): the original file stays
   available for download and its content is extracted as the memory's narrative (and becomes searchable
-  with keyword search). **Sidecar .md**: next to the document download button there is another button
-  ("Download sidecar .md") that downloads a `.md` file with the same base name (e.g. `Mi-recuerdo.pdf` →
-  `Mi-recuerdo.md`) carrying the memory's structured data as YAML frontmatter (`fecha`, `lugar`,
-  `personas`, `diario` with the Diary wikilink as "Viernes 9 de octubre de 2026"): it lets the process
-  that generates the Obsidian vault notes read them directly without extracting them from the document.
-  The date is omitted when missing or when its precision is unknown (`date_precision = 'unknown'`);
-  dates are never invented.
-  **AI comment** (optional, needs an OpenAI key on the server): the “Generate AI comment”
+  with keyword search). **AI comment** (optional, needs an OpenAI key on the server): the “Generate AI comment”
   checkbox produces a short, warm comment from the title and narrative; it can be regenerated when editing the memory.
   **Without uploading files**: the “Video by URL” field accepts a public **YouTube or Instagram**
   link (e.g. `https://www.youtube.com/watch?v=…` or `https://www.instagram.com/reel/…`): the server
@@ -295,10 +278,6 @@ Body example:
 The draft becomes a **pending completion** memory (no duplicates when `draftId` exists).
 Then finish it in the app.
 
-**Note:** each call carries a single photo (`photoBase64`) and creates one draft. For several
-photos, make several calls (one draft per photo). Only in the app can up to 10 photos be
-grouped into a single memory.
-
 ### 5. Local development
 
 ```bash
@@ -327,7 +306,6 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
 | `video-thumb.js` | Extrae el primer cuadro del video como miniatura (ffmpeg) |
 | `media-download.js` | Descarga de video (YouTube/Instagram) y foto por URL (yt-dlp / HTTP) |
 | `doc-extract.js` | Extrae narrativa de documentos: PDF (pdf-parse), Word (.docx, mammoth), texto |
-| `sidecar.js` | Genera el `.md` acompañante del recuerdo: frontmatter YAML con `fecha`, `lugar`, `personas` y `diario` (ruta `/:mid/sidecar`) |
 | `ai.js` | Búsqueda conversacional, generación de historias y comentarios cálidos de IA |
 | `routes-*.js` | Rutas: auth, familias, personas, recuerdos, historias, taller, búsqueda, puente, cuenta |
 | `view-*.ejs` | Vistas / *Views* (layout + páginas) |
@@ -355,25 +333,6 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   más miembros, el más antiguo es promovido. / *Deleting your account removes families
   where you were the sole member (no orphans); if you were the only admin of a larger
   family, the oldest member is promoted.*
-- Versión 1.4.2 — 2026-10-10: **sidecar .md del recuerdo** — junto al botón de descarga del
-  documento hay un botón «Descargar sidecar .md»: baja un `.md` con el mismo nombre base que el documento
-  (ej. `Mi-recuerdo.pdf` → `Mi-recuerdo.md`) con los datos estructurados como frontmatter YAML (`fecha`
-  en AAAA-MM-DD, `lugar` tal cual está en la BD, `personas` de la tabla `persons`, `diario` con el wikilink
-  del Diario en formato «Viernes 9 de octubre de 2026»). Lo genera al vuelo la ruta `GET
-  /families/:fid/memories/:mid/sidecar` (nuevo módulo `sidecar.js`; sin archivos en disco, siempre
-  actualizado; respeta la membresía de la familia). La fecha se omite si es NULL o su precisión es
-  `'unknown'` — nunca se inventan fechas. Sirve para que el proceso que genera las notas del vault de
-  Obsidian lea fecha/lugar/personas/diario directamente. Todo bilingüe ES/EN (nueva clave
-  `sidecar_download`). /
-  *Version 1.4.2 — 2026-10-10: **memory sidecar .md** — next to the document download button there is a
-  "Download sidecar .md" button: it downloads a `.md` with the same base name as the document
-  (e.g. `Mi-recuerdo.pdf` → `Mi-recuerdo.md`) carrying the structured data as YAML frontmatter (`fecha`
-  as AAAA-MM-DD, `lugar` as stored in the DB, `personas` from the `persons` table, `diario` with the
-  Diary wikilink as "Viernes 9 de octubre de 2026"). It is generated on the fly by the new `GET
-  /families/:fid/memories/:mid/sidecar` route (new `sidecar.js` module; no files on disk, always current;
-  honors family membership). The date is omitted when NULL or its precision is `'unknown'` — dates are
-  never invented. It lets the process that generates the Obsidian vault notes read date/place/people/diary
-  directly. All bilingual ES/EN (new `sidecar_download` key).*
 - Versión 1.4.0 — 2026-10-08: **mejoras de octubre** — (1) **varias fotos por recuerdo** (hasta 10;
   selección múltiple, arrastrar y soltar, vista previa antes de guardar, pegar varias a la vez; galería
   con opción de quitar fotos al editar; migración `migration-007.sql`); (2) **editor artístico** (botón 🎨
@@ -509,29 +468,33 @@ Todos los archivos van en la raíz del repo (ZIP plano, listo para *Upload files
   own page with a vector book icon. Downloading regenerates the PDF from the saved album.*
 
 
-### Corrección integral — 10 de octubre de 2026
+## Markdown único por álbum — 10 de octubre de 2026
 
-Se recuperaron las funciones eliminadas por la última carga: selección de recuerdos no
-consecutivos, movimiento individual y múltiple con desplazamiento automático y borrador,
-cargas mixtas de fotos/videos, extracción de documentos, editor artístico y exportación HTML.
-El ZIP HTML contiene el álbum autocontenido con sus medios, además del PDF existente.
+En Taller, abre el álbum guardado. Los botones aparecen en este orden:
+**Descargar PDF · Descargar álbum .md · Descargar HTML**.
 
-**Sidecar:** en Taller (crear/editar/ver álbum) y en cada recuerdo hay un botón
-«Descargar sidecar .md» / “Download sidecar .md”. En el recuerdo aparece junto al documento;
-también está disponible sin documento. El nombre usa el del documento o el título.
-Se exportan únicamente los metadatos guardados y las personas vinculadas de la misma familia.
-No se certifica su verdad histórica ni se infieren datos desde imágenes, narrativas o IA.
-Una fecha ausente, inválida o de precisión desconocida se omite, junto con `diario`.
-Una fecha aproximada conserva `precision_fecha: "approx"` y no crea enlace diario.
-Una fecha exacta conserva `precision_fecha: "exact"` y puede enlazar el Diario.
-La fecha se lee como texto desde PostgreSQL para evitar cambios por zona horaria.
-No se utiliza la fecha de carga o de creación como fecha del recuerdo.
+El Markdown es UN archivo por álbum. Incluye título, narrativa, historias intermedias,
+texto de recuerdos, texto de documentos y transcripciones en el orden guardado.
+Su único frontmatter YAML contiene `titulo`, `album_id` y una lista `recuerdos` con
+`id`, `titulo`, `lugar`, `personas` y, solo cuando corresponda, `fecha` y
+`precision_fecha`. No se asigna una fecha única inventada a un álbum con varias fechas.
+Las fechas ausentes, inválidas o desconocidas se omiten; las aproximadas se marcan
+como `approx`. Se utilizan datos registrados, no inferencias de IA ni fechas de carga.
+Las personas se consultan como nombres individuales, sin dividir nombres con comas.
+El Markdown contiene texto y metadatos; el HTML conserva los medios audiovisuales.
+Los botones individuales de sidecar se retiraron de Taller y de los recuerdos.
+La ruta antigua del sidecar se conserva por compatibilidad con enlaces existentes.
 
-**English:** Restores album selection/reordering, mixed media uploads, document extraction,
-art editing and portable HTML export. Each memory can download a sidecar, including memories
-without attachments. Only stored metadata and linked people in the same family are exported.
-Missing/invalid/unknown dates are omitted; approximate dates are explicitly marked and do not
-create a daily-note link. This exports recorded information, not historical verification.
+Se mantienen las funciones recuperadas: descarga HTML multimedia y PDF, selección
+no consecutiva, movimiento individual/múltiple, posición, desplazamiento automático,
+borrador, cargas mixtas de fotos/videos, extracción de documentos y editor artístico.
 
-Validación local: `npm ci` y `npm test`. Las pruebas HTTP usan datos simulados y no modifican
-la base de producción. Conservar las variables y el volumen existentes al desplegar.
+### English
+Open a saved album in Workshop. **Download album .md** appears immediately after
+Download PDF and before Download HTML. One Markdown file contains the entire album
+in saved order, with one YAML frontmatter listing metadata for each memory.
+Unknown/invalid/missing dates are omitted; approximate dates are explicitly marked.
+No single album date is invented. Markdown contains text/metadata; HTML carries media.
+Individual sidecar buttons have been removed. The legacy endpoint remains compatible.
+
+Validation: `npm test` (9 local tests, simulated HTTP data; no production changes).

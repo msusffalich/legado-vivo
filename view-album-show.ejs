@@ -3,6 +3,7 @@
   <h1>📖 <%= album.title %></h1>
   <p>
     <a class="btn" href="/families/<%= family.id %>/workshop/<%= album.id %>/download"><%= t('download_pdf') %></a>
+    <a class="btn" download href="/families/<%= family.id %>/workshop/<%= album.id %>/download-md"><%= t('download_md') %></a>
     <a class="btn" href="/families/<%= family.id %>/workshop/<%= album.id %>/download-html"><%= t('download_html') %></a>
     <% if (canWrite) { %>
     <a class="btn small" href="/families/<%= family.id %>/workshop/<%= album.id %>/edit"><%= t('edit_album') %></a>
@@ -32,7 +33,7 @@
        else if (m.video_path) { %><span class="memthumb"><video src="<%= m.video_path %>" preload="metadata" muted playsinline></video><span class="playbadge">▶</span></span><% } %>
     <h4><%= m.title %></h4>
     <p class="muted small"><%= fmtMemDate(m) %></p>
-  </a><p><a class="btn ghost small" download href="/families/<%= family.id %>/memories/<%= m.id %>/sidecar">⬇ <%= t('sidecar_download') %></a></p></div>
+  </a></div>
 <%   }
    }); %>
 </div>
