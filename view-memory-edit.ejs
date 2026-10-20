@@ -5,7 +5,7 @@
   <label><%= t('memory_title') %> *<input name="title" required maxlength="200" value="<%= memory.title %>"></label>
   <div class="two">
     <label><%= t('photos_label') %> <span class="muted">(<%= t('optional') %> · <%= t('photos_max_hint') %>)</span>
-      <input type="file" id="photo-input" name="photo" accept="image/*,video/*" multiple data-limit-message="<%= t('photos_limit_error') %>" data-existing="<%= Math.max(photos.length, memory.photo_path ? 1 : 0) + Math.max(videos.length, memory.video_path ? 1 : 0) %>">
+      <input type="file" id="photo-input" name="photo" accept="image/*,video/*,.heic,.heif,.hif,.avif,.tif,.tiff,.dng,.cr2,.cr3,.nef,.arw,.raw,.mov,.mkv,.avi,.mts,.m2ts,.wmv" multiple data-limit-message="<%= t('photos_limit_error') %>" data-existing="<%= Math.max(photos.length, memory.photo_path ? 1 : 0) + Math.max(videos.length, memory.video_path ? 1 : 0) %>">
       <span class="muted small"><%= t('photos_hint') %></span></label>
     <label><%= t('audio_label') %> <span class="muted">(<%= t('optional') %>)</span><input type="file" name="audio" accept="audio/*"></label>
   </div>

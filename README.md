@@ -498,3 +498,14 @@ No single album date is invented. Markdown contains text/metadata; HTML carries 
 Individual sidecar buttons have been removed. The legacy endpoint remains compatible.
 
 Validation: `npm test` (9 local tests, simulated HTTP data; no production changes).
+
+
+## Conversión multimedia al guardar · 20 octubre 2026
+
+Las cargas de fotos, videos y audio pasan por el conversor antes de guardar sus rutas. HEIC/HEIF usa heic-decode y Sharp; las fotos se publican como JPEG, los videos como MP4 H.264/AAC y el audio como MP3. Todos los elementos del lote se convierten. Se conservan las fuentes en el volumen del servidor; las rutas de la aplicación apuntan a las copias compatibles. Las imágenes por URL también se convierten. El editor artístico convierte el nuevo archivo antes de mostrarlo, sin IA.
+
+Incluye dependencias Sharp/heic-decode y paquetes ImageMagick/LibRaw para PSD y RAW. No basta con agregar extensiones al selector. Los archivos dañados, protegidos o no decodificables se rechazan con mensaje claro. No se promete compatibilidad literal con todos los códecs o variantes RAW. GIF/TIFF/HEIF de varias imágenes se convierten a una imagen fija; el origen se conserva. Límites de entrada: 100 MB foto/audio; 200 MB video; 25 MB documento; 10 elementos visuales por recuerdo.
+
+Pruebas: `npm test`. Para la prueba HEIC real ampliada, define HEIC_FIXTURE con una ruta al archivo de ejemplo de libheif (https://github.com/strukturag/libheif/blob/master/examples/example.heic). Se comprobó carga HEIC con MIME genérico, JPEG válido, fallo de archivo HEIC dañado, vista previa del editor y lotes de fotos/videos reales. Los conversores no usan créditos de IA.
+
+El despliegue actual usa Railpack: railpack.json declara también ImageMagick, LibRaw y FFmpeg como paquetes de ejecución. nixpacks.toml se mantiene para instalaciones anteriores.

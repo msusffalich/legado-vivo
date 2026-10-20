@@ -10,7 +10,7 @@
       </div>
     <% }); %>
   </div>
-  <p class="muted small"><%= t('art_upload_new') %>: <input type="file" id="art-upload" accept="image/*"></p>
+  <p class="muted small"><%= t('art_upload_new') %>: <input type="file" id="art-upload" accept="image/*,.heic,.heif,.hif,.tif,.tiff,.dng,.cr2,.cr3,.nef,.arw,.raw"></p>
   <img id="art-source" style="display:none" alt="">
 
   <h3><%= t('art_choose_style') %></h3>
@@ -68,10 +68,12 @@
   var first = document.querySelector('#art-sources .pick');
   if (first) pick(first.getAttribute('data-src'), first);
 
-  document.getElementById('art-upload').addEventListener('change', function (e) {
+  var sourceEpoch=0;
+  document.getElementById('art-upload').addEventListener('change', async function (e) {
     var f = e.target.files && e.target.files[0];
     if (!f) return;
-    pick(URL.createObjectURL(f), null);
+    var epoch=++sourceEpoch;readyStyles(false);saveBtn.disabled=true;status.textContent=T.loading;
+    try{var data=new FormData();data.append('artphoto',f);var response=await fetch('/families/'+FID+'/memories/'+MID+'/art-source',{method:'POST',body:data});if(!response.ok){var fail=await response.json();throw new Error(fail.error||T.loadError);}var blob=await response.blob();if(epoch===sourceEpoch)pick(URL.createObjectURL(blob),null);}catch(error){if(epoch===sourceEpoch)status.textContent=error.message||T.loadError;}
   });
 
   function markStyles() {

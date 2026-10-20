@@ -36,13 +36,13 @@ function command(bin, args, stdoutFile) {
     fs.readSync(fd, header, 0, header.length, 0); fs.closeSync(fd);
     const brand = header.toString('ascii', 8, 12);
     if (header.toString('ascii', 0, 4) === '8BPS') {
-      await command(process.env.MAGICK_PATH || 'magick', ['-limit', 'memory', '256MiB', '-limit', 'map', '512MiB',
+      await command(process.env.MAGICK_PATH || (process.platform === 'win32' ? 'magick' : 'convert'), ['-limit', 'memory', '256MiB', '-limit', 'map', '512MiB',
         '-limit', 'disk', '512MiB', '-limit', 'thread', '1', '-limit', 'time', '120', 'psd:' + source + '[0]',
         '-auto-orient', '-resize', '4096x4096>', '-background', 'white', '-alpha', 'remove', '-alpha', 'off',
         '-colorspace', 'sRGB', '-quality', '94', 'jpeg:' + destination]);
       return;
     }
-    if (['mif1','msf1','heic','heix','hevc','hevx'].includes(brand) || /\.hei[cf]$/i.test(source)) {
+    if (['mif1','msf1','heic','heix','hevc','hevx'].includes(brand) || /\.(hei[cf]|hif)$/i.test(source)) {
       const decode = require('heic-decode');
       const images = await decode.all({ buffer: await fs.promises.readFile(source) });
       try {

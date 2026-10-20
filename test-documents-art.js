@@ -89,12 +89,23 @@ test('documents extract PDF/Word/text, persist searchable narrative and enforce 
     return fetch(base + route, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' }, body: data });
   }
   try {
+    const sharp = require('sharp');
+    const photoBytes = await sharp({create:{width:32,height:24,channels:3,background:'#84a764'}}).jpeg().toBuffer();
+    const videoFile = path.join(dir,'fixture.mp4');
+    require('child_process').execFileSync(require('ffmpeg-static'),['-v','error','-y','-f','lavfi','-i','color=c=blue:s=32x32:d=0.2','-c:v','libx264','-pix_fmt','yuv420p',videoFile]);
+    const videoBytes=fs.readFileSync(videoFile);
+    if(process.env.HEIC_FIXTURE){
+    const heic=fs.readFileSync(process.env.HEIC_FIXTURE);
+    const heicResponse=await upload('APPLE.HEIC',heic,'/memories','photo');assert.equal(heicResponse.status,200,await heicResponse.clone().text());
+    const heicId=Number((await heicResponse.json()).redirect.split('/').pop());assert.match(records.get(heicId).photo_path,/\.view\.jpg$/);const decoded=await sharp(path.join(dir,path.basename(records.get(heicId).photo_path))).metadata();assert.ok(decoded.width>0);
+    const badHeic=await upload('broken.heic',Buffer.from('not-heic'),'/memories','photo');assert.equal(badHeic.status,400);
+    }
     async function batch(count, route = '/memories', removeVideo, kind) {
       const data = new FormData(); data.append('title', 'WhatsApp mixed batch');
       if (removeVideo) data.append('remove_video_ids', String(removeVideo));
       for (let i = 0; i < count; i++) {
         const video = kind === 'video' || (kind !== 'photo' && i % 2 === 1);
-        data.append('photo', new Blob(['fixture-' + i], { type: video ? 'video/mp4' : 'image/jpeg' }), 'whatsapp-' + i + (video ? '.mp4' : '.jpg'));
+        data.append('photo', new Blob([video?videoBytes:photoBytes], { type: video ? 'video/mp4' : 'image/jpeg' }), 'whatsapp-' + i + (video ? '.mp4' : '.jpg'));
       }
       return fetch(base + route, { method: 'POST', headers: { Accept: 'application/json' }, body: data });
     }
@@ -142,9 +153,10 @@ test('documents extract PDF/Word/text, persist searchable narrative and enforce 
     const damagedEdit = await upload('danado.pdf', Buffer.from('not a PDF'), '/memories/108');
     assert.equal(damagedEdit.status, 400);
     assert.deepEqual(fs.readFileSync(path.join(dir, 'original.jpg')), originalPhoto);
+    if(process.env.HEIC_FIXTURE){const preview=await upload('preview.heic',fs.readFileSync(process.env.HEIC_FIXTURE),'/memories/108/art-source','artphoto');assert.equal(preview.status,200,await preview.clone().text());assert.match(preview.headers.get('content-type'),/image\/jpeg/);assert.ok((await require('sharp')(Buffer.from(await preview.arrayBuffer())).metadata()).width>0);}
     const editor = await (await fetch(base + '/memories/108/art')).json();
     assert.equal(editor.photos[0].photo_path, '/uploads/original.jpg');
-    const saved = await upload('estilo-carboncillo.jpg', Buffer.from('artistic-copy'), '/memories/108/art-photo', 'artphoto');
+    const saved = await upload('estilo-carboncillo.jpg', photoBytes, '/memories/108/art-photo', 'artphoto');
     assert.equal(saved.status, 200);
     const art = await saved.json(); assert.equal(art.ok, true);
     assert.notEqual(art.photo_path, records.get(108).photo_path);

@@ -116,7 +116,8 @@ async function main() {
       : '/uploads/' + name;
     const { rows } = await db.query(
       `SELECT m.family_id FROM memories m WHERE m.photo_path=$1 OR m.audio_path=$1 OR m.video_path=$1 OR m.doc_path=$1
-       OR EXISTS (SELECT 1 FROM memory_photos mp WHERE mp.photo_path=$1 AND mp.memory_id=m.id) LIMIT 1`, [lookup]);
+       OR EXISTS (SELECT 1 FROM memory_photos mp WHERE mp.photo_path=$1 AND mp.memory_id=m.id)
+       OR EXISTS (SELECT 1 FROM memory_videos mv WHERE mv.video_path=$1 AND mv.memory_id=m.id) LIMIT 1`, [lookup]);
     if (!rows.length) return res.status(404).send('No encontrado');
     const { rows: ok } = await db.query(
       'SELECT 1 FROM memberships WHERE family_id=$1 AND user_id=$2',

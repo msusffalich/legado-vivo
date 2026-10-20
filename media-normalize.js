@@ -83,11 +83,11 @@ async function normalizeMedia(source, kind) {
 }
 async function normalizeUploads(files, directory) {
   for (const kind of ['photo', 'video', 'audio']) {
-    const f = files && files[kind] && files[kind][0];
-    if (!f) continue;
+    for (const f of (files && files[kind]) || []) {
     const converted = await normalizeMedia(path.join(directory, f.filename), kind);
     Object.assign(f, converted);
     f.mimetype = kind === 'photo' ? 'image/jpeg' : kind === 'video' ? 'video/mp4' : 'audio/mpeg';
+    }
   }
 }
 function mediaErrorMessage(err, lang) {

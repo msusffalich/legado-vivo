@@ -34,7 +34,7 @@ function addInterview() {
     var targets = { photo: field('photo'), video: field('video'), audio: field('audio'), document: field('document') };
     function pickTarget(f) {
       var type = f.type || '', name = f.name || '';
-      if (/^image\//.test(type) || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg)$/i.test(name)) return targets.photo;
+      if (/^image\//.test(type) || /\.(jpe?g|png|gif|webp|avif|heic|heif|hif|dng|cr2|cr3|nef|arw|raf|raw|bmp|tiff?|svg)$/i.test(name)) return targets.photo;
       if (/^video\//.test(type) || /\.(mp4|mov|webm|m4v|3gp)$/i.test(name)) return targets.photo;
       if (/^audio\//.test(type)) return targets.audio;
       if (/pdf/i.test(type) || /word|officedocument/i.test(type) || /^text\//.test(type) || /\.(pdf|docx|txt|md)$/i.test(name)) return targets.document;
@@ -112,6 +112,7 @@ function addInterview() {
           var label = document.createElement('span');
           label.className = 'muted small';
           label.textContent = f.name;
+          img.onerror=function(){img.style.display='none';label.textContent=f.name+' · '+(document.documentElement.lang==='en'?'Preview available after saving and conversion.':'Vista previa disponible después de guardar y convertir.');};
           var rm = document.createElement('button');
           rm.type = 'button';
           rm.className = 'preview-rm';
@@ -130,7 +131,7 @@ function addInterview() {
       files = Array.prototype.slice.call(files || []);
       var overflow = false;
       for (var i = 0; i < files.length; i++) {
-        if (/^(image|video)\//.test(files[i].type || '') || /\.(jpe?g|png|gif|webp|avif|heic|heif|bmp|tiff?|svg|mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(files[i].name || '')) {
+        if (/^(image|video)\//.test(files[i].type || '') || /\.(jpe?g|png|gif|webp|avif|heic|heif|hif|dng|cr2|cr3|nef|arw|raf|raw|bmp|tiff?|svg|mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(files[i].name || '')) {
           if (dt.files.length + remainingExisting() >= 10) overflow = true;
           else dt.items.add(files[i]);
         }

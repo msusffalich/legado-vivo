@@ -1,0 +1,1 @@
+Correccion HEIC/HEIF de Legado, 20 octubre 2026. Archivos basados en main e33796cca2760dc332359313107d002135e523c2. Reemplaza estos archivos en la raiz de msusffalich/legado-vivo y confirma el commit. Incluye package y lockfile y los dos conversores. El despliegue directo en Railway no actualiza GitHub. No se incluyen claves, datos ni fotos personales.
