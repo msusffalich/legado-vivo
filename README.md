@@ -18,10 +18,15 @@ convierten en historias verificables y álbumes PDF por temas.
 Legado Vivo es el archivo privado de tu familia:
 
 - **Familias y roles**: crea varias familias; cada una con administrador, colaboradores y lectores.
-- **Recuerdos**: fotos (hasta 10 por recuerdo, con selección múltiple, arrastrar y soltar y vista previa antes de
-  guardar; también puedes pegar varias a la vez), video (máx. 200 MB) y/o audio (máx. 100 MB), relato, transcripción,
-  personas, lugar, fecha (exacta o aproximada) y entrevista guiada. La subida muestra barra de progreso y avisa el
-  motivo si falla. Estados: completo o *pendiente de completar*.
+- **Recuerdos**: fotos y videos (hasta 10 en total por recuerdo, incluidos los ya guardados), audio,
+  relato, transcripción, personas, lugar, fecha (exacta o aproximada) y entrevista guiada.
+  En **Nuevo recuerdo** o **Editar**, selecciona un lote de fotos y videos, arrástralos o pégalos.
+  Puedes añadir más en otra selección y quitar elementos de la vista previa antes de guardar.
+  Límite por archivo: foto y audio, 100 MB; video, 200 MB. La barra distingue la subida del guardado.
+  Se avisa si un tipo no compatible no se agregó. Si un archivo no se puede convertir, el lote no se
+  guarda y el formulario conserva la selección; el aviso identifica el archivo para que puedas quitarlo y reintentar.
+  Al convertir correctamente, se conservan los originales y se muestran copias JPEG o MP4 compatibles.
+  Estados: completo o *pendiente de completar*.
   Formatos aceptados: imágenes (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
   y audios (mp3, wav, m4a, aac, ogg, flac…). En la biblioteca, los recuerdos con video muestran una miniatura
   (primer cuadro) con insignia ▶; el video se reproduce en la página del recuerdo. Las fotos del recuerdo se muestran
@@ -41,8 +46,8 @@ Legado Vivo es el archivo privado de tu familia:
   muestra «descargando…» o el motivo del error en tu idioma. El campo «Foto por URL» acepta el enlace
   directo de cualquier imagen pública (o de un post de Instagram): se descarga (máx. 100 MB) y queda como
   la foto del recuerdo. Puedes cambiar la URL después desde *Editar*.
-  **Pegado directo**: también puedes pegar (Ctrl+V o ⌘V) imágenes, un video, un audio o un documento
-  copiado: se coloca solo en su casilla del formulario (varias fotos a la vez, un archivo por los demás tipos).
+  **Pegado directo (Ctrl+V o ⌘V)**: las fotos y los videos se agregan a la selección; el audio y el documento
+  conservan una casilla independiente (un archivo por tipo).
 - **Cronología**: ordenada por la fecha del recuerdo, no por la fecha de subida.
 - **Historias**: genera texto con IA (OpenAI, opcional) citando sus fuentes, o escríbelas manualmente.
 - **Taller**: arma álbumes PDF por tema (cumpleaños, Navidad, viajes…).
@@ -158,10 +163,15 @@ Necesitas PostgreSQL local con la base creada (`DATABASE_URL`).
 Legado Vivo is your family's private archive:
 
 - **Families & roles**: create several families; each with admin, collaborators and readers.
-- **Memories**: photos (up to 10 per memory, with multi-select, drag and drop and preview before saving;
-  you can also paste several at once), video (max 200 MB) and/or audio (max 100 MB), story, transcription,
-  people, place, date (exact or approximate) and a guided interview. Upload shows a progress bar and reports the
-  reason if it fails. Status: complete or *pending completion*.
+- **Memories**: photos and videos (up to 10 combined per memory, including previously saved items), audio,
+  story, transcription, people, place, date (exact or approximate) and a guided interview.
+  In **New memory** or **Edit**, select, drop, or paste a batch of photos and videos. You can make
+  another selection to add more, or remove items from the previews before saving.
+  Per-file limits: photo and audio, 100 MB; video, 200 MB. The progress bar distinguishes uploading from saving.
+  The form reports unsupported files that were not added. If a file cannot be converted, the batch is not
+  saved and your selection stays in the form; the message names the file so you can remove it and retry.
+  On successful conversion, originals are retained and compatible JPEG or MP4 copies are shown.
+  Status: complete or *pending completion*.
   Accepted formats: images (jpg, png, gif, webp, heic/heif, avif, raw…), videos (mp4, mov, avi, mkv, webm, 3gp, mts…)
   and audios (mp3, wav, m4a, aac, ogg, flac…). In the library, video memories show a thumbnail
   (first frame) with a ▶ badge; the video plays on the memory page. A memory's photos display as a
@@ -180,8 +190,8 @@ Legado Vivo is your family's private archive:
   shows “downloading…” or the reason for the error in your language. The “Photo by URL” field accepts a
   direct link to any public image (or an Instagram post): it is downloaded (max 100 MB) and saved as the
   memory's photo. You can change the URL later from *Edit*.
-  **Direct paste**: you can also paste (Ctrl+V or ⌘V) copied images, video, audio or documents:
-  they land in their own form field (several photos at once, one file per other type).
+  **Direct paste (Ctrl+V or ⌘V)**: photos and videos join the selection; audio and documents use their own
+  separate fields (one file per type).
 - **Timeline**: ordered by the memory's date, not the upload date.
 - **Stories**: AI-generate text (OpenAI, optional) with cited sources, or write manually.
 - **Workshop**: build themed PDF albums (birthdays, Christmas, trips…).

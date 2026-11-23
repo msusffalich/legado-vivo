@@ -84,7 +84,12 @@ async function normalizeMedia(source, kind) {
 async function normalizeUploads(files, directory) {
   for (const kind of ['photo', 'video', 'audio']) {
     for (const f of (files && files[kind]) || []) {
-    const converted = await normalizeMedia(path.join(directory, f.filename), kind);
+    let converted;
+    try { converted = await normalizeMedia(path.join(directory, f.filename), kind); }
+    catch (err) {
+      if (/^MEDIA_(TIMEOUT|TOO_LARGE|CONVERSION_FAILED)$/.test(err.code || '')) err.originalname = f.originalname;
+      throw err;
+    }
     Object.assign(f, converted);
     f.mimetype = kind === 'photo' ? 'image/jpeg' : kind === 'video' ? 'video/mp4' : 'audio/mpeg';
     }

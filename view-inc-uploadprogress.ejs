@@ -18,14 +18,18 @@
   var status = document.getElementById('upload-status');
   var errBox = document.getElementById('upload-error');
   var submitBtn = form.querySelector('button[type="submit"]');
+  var inFlight = false;
   function fmtMB(n) { return (n / 1048576).toFixed(1) + ' MB'; }
   function showError(msg) {
+    inFlight = false;
     errBox.textContent = msg;
     errBox.hidden = false;
     if (submitBtn) submitBtn.disabled = false;
   }
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (inFlight) return;
+    inFlight = true;
     errBox.hidden = true;
     progress.hidden = false;
     fill.style.width = '0%';
@@ -44,6 +48,7 @@
         status.textContent = T.uploading;
       }
     });
+    xhr.upload.addEventListener('load', function () { status.textContent = T.done; });
     xhr.addEventListener('load', function () {
       var data = null;
       try { data = JSON.parse(xhr.responseText); } catch (e2) { /* noop */ }
@@ -56,7 +61,13 @@
     });
     xhr.addEventListener('error', function () { showError(T.connError); });
     xhr.addEventListener('abort', function () { showError(T.connError); });
-    xhr.send(new FormData(form));
+    try {
+      var data = new FormData(form);
+      if (window.__lvPhotoDrop && window.__lvPhotoDrop.appendTo) window.__lvPhotoDrop.appendTo(data);
+      xhr.send(data);
+    } catch (err) {
+      showError(T.connError);
+    }
   });
 })();
 </script>

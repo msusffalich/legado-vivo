@@ -187,7 +187,7 @@ function uploadFail(req, res, err, fallback) {
     const max = /toobig:document/.test(err.message) ? DOC_MAX_MB : MEDIA_MAX_MB;
     msg = req.t('upload_too_large', { max });
   }
-  else if (err && /^MEDIA_/.test(err.code || '')) msg = mediaErrorMessage(err, req.lang);
+  else if (err && /^MEDIA_/.test(err.code || '')) msg = (err.originalname ? err.originalname + ': ' : '') + mediaErrorMessage(err, req.lang);
   else if (err && err.message === 'badtype') msg = req.t('upload_bad_type');
   else if (err && err.code === 'DOC_EXTRACTION_FAILED') msg = req.t('doc_extract_failed');
   else if (err && (err.code === 'PHOTO_LIMIT' || (err.code === 'LIMIT_UNEXPECTED_FILE' && ['photo', 'video'].includes(err.field)))) msg = req.t('photos_limit_error');

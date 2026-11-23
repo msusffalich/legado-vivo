@@ -109,6 +109,16 @@ test('documents extract PDF/Word/text, persist searchable narrative and enforce 
       }
       return fetch(base + route, { method: 'POST', headers: { Accept: 'application/json' }, body: data });
     }
+    const blocked = new FormData(); blocked.append('title', 'One format was invalid');
+    blocked.append('photo', new Blob([photoBytes], { type: 'image/jpeg' }), 'valid.jpg');
+    blocked.append('photo', new Blob(['invalid clip'], { type: 'video/mp4' }), 'video-danado.mp4');
+    const previousFiles = fs.readdirSync(dir).sort();
+    const previousRecords = records.size;
+    const conversionFailure = await fetch(base + '/memories', { method: 'POST', headers: { Accept: 'application/json' }, body: blocked });
+    assert.equal(conversionFailure.status, 400, await conversionFailure.clone().text());
+    assert.match((await conversionFailure.json()).error, /^video-danado\.mp4:/);
+    assert.equal(records.size, previousRecords);
+    assert.deepEqual(fs.readdirSync(dir).sort(), previousFiles);
     const ten = await batch(10); assert.equal(ten.status, 200, await ten.clone().text());
     const mixedId = Number((await ten.json()).redirect.split('/').pop());
     assert.equal(photos.get(mixedId).length, 5); assert.equal(videos.get(mixedId).length, 5);

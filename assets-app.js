@@ -24,6 +24,16 @@ function addInterview() {
   story.focus();
 }
 
+// Los mismos formatos de foto/video que admite el servidor, incluso si el
+// dispositivo declara un MIME genérico.
+function lvMediaKind(file) {
+  var type = file.type || '';
+  var name = file.name || '';
+  if (/^video\//i.test(type) || /\.(mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(name)) return 'video';
+  if (/^image\//i.test(type) || /\.(jpe?g|png|gif|webp|bmp|tiff?|heic|heif|hif|avif|svg|ico|dng|cr2|cr3|crw|raf|raw|nrw|nef|arw|rw2|orf|pef|srw|psd)$/i.test(name)) return 'photo';
+  return '';
+}
+
 // Pegado directo (Ctrl+V / Cmd+V) de archivos en el formulario de recuerdos.
 // Solo actúa cuando el portapapeles trae archivos; el pegado de texto no se toca.
 (function () {
@@ -34,8 +44,7 @@ function addInterview() {
     var targets = { photo: field('photo'), video: field('video'), audio: field('audio'), document: field('document') };
     function pickTarget(f) {
       var type = f.type || '', name = f.name || '';
-      if (/^image\//.test(type) || /\.(jpe?g|png|gif|webp|avif|heic|heif|hif|dng|cr2|cr3|nef|arw|raf|raw|bmp|tiff?|svg)$/i.test(name)) return targets.photo;
-      if (/^video\//.test(type) || /\.(mp4|mov|webm|m4v|3gp)$/i.test(name)) return targets.photo;
+      if (lvMediaKind(f)) return targets.photo;
       if (/^audio\//.test(type)) return targets.audio;
       if (/pdf/i.test(type) || /word|officedocument/i.test(type) || /^text\//.test(type) || /\.(pdf|docx|txt|md)$/i.test(name)) return targets.document;
       return null;
@@ -79,14 +88,14 @@ function addInterview() {
 })();
 
 // Galería de fotos: selección múltiple + arrastrar y soltar + vista previa
-// con opción de quitar antes de guardar. El input real se sincroniza solo.
+// con opción de quitar antes de guardar. El envío usa la selección que se muestra.
 (function () {
   function init() {
     var input = document.getElementById('photo-input');
     var drop = document.getElementById('photo-drop');
     var prev = document.getElementById('photo-previews');
     if (!input || !drop) return;
-    var dt = new DataTransfer();
+    var selected = [];
     var previewUrls = [];
     var notice = document.getElementById('photo-limit-notice');
     function remainingExisting() {
@@ -98,11 +107,11 @@ function addInterview() {
       previewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
       previewUrls = [];
       prev.innerHTML = '';
-      for (var i = 0; i < dt.files.length; i++) {
+      for (var i = 0; i < selected.length; i++) {
         (function (f, idx) {
           var box = document.createElement('div');
           box.className = 'preview';
-          var video = /^video\//.test(f.type || '') || /\.(mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(f.name || '');
+          var video = lvMediaKind(f) === 'video';
           var img = document.createElement(video ? 'video' : 'img');
           if (video) { img.controls = true; img.preload = 'metadata'; }
           var url = URL.createObjectURL(f);
@@ -118,31 +127,41 @@ function addInterview() {
           rm.className = 'preview-rm';
           rm.textContent = '×';
           rm.setAttribute('aria-label', '×');
-          rm.addEventListener('click', function () { dt.items.remove(idx); sync(); });
+          rm.addEventListener('click', function () { selected.splice(idx, 1); render(); });
           box.appendChild(img);
           box.appendChild(label);
           box.appendChild(rm);
           prev.appendChild(box);
-        })(dt.files[i], i);
+        })(selected[i], i);
       }
     }
-    function sync() { input.files = dt.files; render(); }
     function addFiles(files) {
       files = Array.prototype.slice.call(files || []);
       var overflow = false;
+      var incompatible = [];
       for (var i = 0; i < files.length; i++) {
-        if (/^(image|video)\//.test(files[i].type || '') || /\.(jpe?g|png|gif|webp|avif|heic|heif|hif|dng|cr2|cr3|nef|arw|raf|raw|bmp|tiff?|svg|mp4|m4v|mov|avi|mkv|webm|wmv|flv|3gp|3g2|mts|m2ts|ts|mpg|mpeg|ogv)$/i.test(files[i].name || '')) {
-          if (dt.files.length + remainingExisting() >= 10) overflow = true;
-          else dt.items.add(files[i]);
+        if (!lvMediaKind(files[i])) {
+          incompatible.push(files[i].name);
+        } else if (selected.length + remainingExisting() >= 10) {
+          overflow = true;
+        } else {
+          selected.push(files[i]);
         }
       }
-      if (notice) notice.textContent = overflow ? input.dataset.limitMessage : '';
-      sync();
+      if (notice) {
+        var messages = [];
+        if (overflow) messages.push(input.dataset.limitMessage);
+        if (incompatible.length) messages.push(input.dataset.typeMessage + ': ' + incompatible.join(', '));
+        notice.textContent = messages.join(' ');
+      }
+      render();
     }
     input.addEventListener('change', function () {
-      // input.files shares dt.files in Chromium. Clearing input.value would
-      // also clear the gallery and submit an empty photo field.
-      addFiles(Array.prototype.slice.call(input.files || []));
+      // Take a snapshot of the live list before clearing the picker. Clearing
+      // lets the user select the same file after removing it from the previews.
+      var files = Array.prototype.slice.call(input.files || []);
+      input.value = '';
+      addFiles(files);
     });
     ['dragenter', 'dragover'].forEach(function (ev) {
       drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
@@ -153,7 +172,13 @@ function addInterview() {
     drop.addEventListener('drop', function (e) {
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
     });
-    window.__lvPhotoDrop = { addFiles: addFiles };
+    window.__lvPhotoDrop = {
+      addFiles: addFiles,
+      appendTo: function (data) {
+        data.delete(input.name);
+        selected.forEach(function (file) { data.append(input.name, file, file.name); });
+      }
+    };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
